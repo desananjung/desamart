@@ -5,7 +5,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "migrate": "npx prisma migrate dev --name init",
-    "generate": "npx prisma generate"
+    "generate": "npx prisma generate",
+    "seed": "node seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",

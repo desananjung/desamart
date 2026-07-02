@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { 
-  ClockIcon, 
-  TruckIcon, 
-  CheckCircleIcon, 
-  XCircleIcon,
-  EyeIcon
-} from '@heroicons/react/24/outline';
+import { ClockIcon, CheckCircleIcon, TruckIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 const SellerOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -19,7 +13,7 @@ const SellerOrders = () => {
       try {
         const url = filter === 'all' ? '/seller/orders' : `/seller/orders?status=${filter}`;
         const res = await api.get(url);
-        setOrders(res.data.data);
+        setOrders(res.data.data || []);
       } catch (error) {
         console.error('Error fetching orders:', error);
       } finally {
@@ -29,18 +23,36 @@ const SellerOrders = () => {
     fetchOrders();
   }, [filter]);
 
-  const handleStatusUpdate = async (orderId, status) => {
-    if (!window.confirm(`Ubah status pesanan #${orderId} menjadi ${status}?`)) return;
-    try {
-      await api.put(`/seller/orders/${orderId}/status`, { status });
-      // Refresh orders
-      const res = await api.get('/seller/orders');
-      setOrders(res.data.data);
-      alert('✅ Status pesanan berhasil diperbarui!');
-    } catch (error) {
-      alert('❌ Gagal memperbarui status');
-    }
+  const updateStatus = async (orderId, status) => {
+  const statusLabels = {
+    'PROCESSING': 'diproses',
+    'SHIPPED': 'dikirim',
+    'DELIVERED': 'selesai',
+    'CANCELLED': 'dibatalkan'
   };
+  
+  // Ganti confirm dengan window.confirm
+  if (!window.confirm(`Ubah status pesanan #${orderId} menjadi ${statusLabels[status] || status}?`)) return;
+  
+  try {
+    await api.put(`/seller/orders/${orderId}/status`, { status });
+    
+    // Refresh orders
+    const res = await api.get('/seller/orders');
+    setOrders(res.data.data || []);
+    
+    // Tampilkan pesan sesuai status
+    let message = `✅ Status pesanan #${orderId} berhasil diupdate`;
+    if (status === 'SHIPPED') {
+      message = '🚚 Pesanan dikirim! Pembeli akan mendapat notifikasi.';
+    } else if (status === 'DELIVERED') {
+      message = '✅ Pesanan selesai! Pembeli sudah menerima pesanan.';
+    }
+    alert(message);
+  } catch (error) {
+    alert('❌ Gagal mengupdate status');
+  }
+};
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -53,25 +65,47 @@ const SellerOrders = () => {
     return styles[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const getStatusIcon = (status) => {
-    const icons = {
-      PENDING: <ClockIcon className="w-4 h-4" />,
-      PROCESSING: <TruckIcon className="w-4 h-4" />,
-      SHIPPED: <TruckIcon className="w-4 h-4" />,
-      DELIVERED: <CheckCircleIcon className="w-4 h-4" />,
-      CANCELLED: <XCircleIcon className="w-4 h-4" />
-    };
-    return icons[status] || <ClockIcon className="w-4 h-4" />;
+  const getStatusActions = (order) => {
+    switch (order.status) {
+      case 'PENDING':
+        return (
+          <>
+            <button
+              onClick={() => updateStatus(order.id, 'PROCESSING')}
+              className="btn-primary text-xs py-1 px-3"
+            >
+              Proses
+            </button>
+            <button
+              onClick={() => updateStatus(order.id, 'CANCELLED')}
+              className="bg-red-500 text-white text-xs py-1 px-3 rounded-lg hover:bg-red-600"
+            >
+              Tolak
+            </button>
+          </>
+        );
+      case 'PROCESSING':
+        return (
+          <button
+            onClick={() => updateStatus(order.id, 'SHIPPED')}
+            className="btn-primary text-xs py-1 px-3"
+          >
+            Kirim
+          </button>
+        );
+      case 'SHIPPED':
+        return (
+          <button
+            onClick={() => updateStatus(order.id, 'DELIVERED')}
+            className="bg-green-500 text-white text-xs py-1 px-3 rounded-lg hover:bg-green-600"
+          >
+            Selesai
+          </button>
+        );
+      default:
+        return null;
+    }
   };
-
-  const statusOptions = [
-    { value: 'all', label: 'Semua' },
-    { value: 'PENDING', label: 'Menunggu' },
-    { value: 'PROCESSING', label: 'Diproses' },
-    { value: 'SHIPPED', label: 'Dikirim' },
-    { value: 'DELIVERED', label: 'Selesai' },
-    { value: 'CANCELLED', label: 'Dibatalkan' }
-  ];
 
   if (loading) {
     return (
@@ -83,40 +117,32 @@ const SellerOrders = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">📋 Kelola Pesanan</h1>
-            <p className="text-gray-500 mt-1">Lihat dan update status pesanan</p>
-          </div>
-          <Link to="/seller" className="btn-secondary text-sm">
-            ← Kembali
-          </Link>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">📋 Manajemen Pesanan</h1>
+          <p className="text-gray-500">Kelola semua pesanan masuk</p>
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="input-field w-auto"
+          >
+            <option value="all">Semua</option>
+            <option value="PENDING">⏳ Menunggu</option>
+            <option value="PROCESSING">📦 Diproses</option>
+            <option value="SHIPPED">🚚 Dikirim</option>
+            <option value="DELIVERED">✅ Selesai</option>
+            <option value="CANCELLED">❌ Dibatalkan</option>
+          </select>
         </div>
       </div>
 
-      {/* Filter */}
-      <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-        {statusOptions.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => setFilter(opt.value)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap ${
-              filter === opt.value
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
       {orders.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-          <span className="text-6xl mb-4 block">📭</span>
-          <h3 className="text-xl font-semibold text-gray-800">Belum Ada Pesanan</h3>
-          <p className="text-gray-500 mt-2">Pesanan akan muncul di sini setelah pembeli checkout</p>
+        <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <span className="text-6xl block mb-4">📭</span>
+          <h3 className="text-xl font-semibold">Belum Ada Pesanan</h3>
+          <p className="text-gray-500 mt-2">Pesanan akan muncul di sini setelah ada pembeli</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -124,13 +150,10 @@ const SellerOrders = () => {
             <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-4 mb-3">
-                    <h3 className="font-bold text-lg text-gray-800">
-                      Pesanan #{order.id}
-                    </h3>
-                    <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(order.status)}`}>
-                      {getStatusIcon(order.status)}
-                      <span>{order.status}</span>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-bold text-lg">Pesanan #{order.id}</h3>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(order.status)}`}>
+                      {order.status}
                     </span>
                     <span className="text-sm text-gray-500">
                       {new Date(order.createdAt).toLocaleDateString('id-ID', {
@@ -143,71 +166,37 @@ const SellerOrders = () => {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                     <div>
                       <p className="text-sm text-gray-500">Pembeli</p>
                       <p className="font-medium">{order.user?.name}</p>
                       <p className="text-sm text-gray-600">{order.user?.email}</p>
+                      <p className="text-sm text-gray-600">📞 {order.phone}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Alamat Pengiriman</p>
                       <p className="font-medium">{order.address}</p>
-                      <p className="text-sm text-gray-600">📞 {order.phone}</p>
                     </div>
                   </div>
 
                   <div className="border-t border-gray-100 pt-3">
+                    <p className="text-sm text-gray-500 mb-2">Produk:</p>
                     <div className="flex flex-wrap gap-2">
-                      {order.items.map((item, idx) => (
-                        <span key={idx} className="bg-gray-50 px-3 py-1 rounded-lg text-sm">
-                          {item.product.name} <span className="text-gray-400">x{item.quantity}</span>
+                      {order.items?.map((item, idx) => (
+                        <span key={idx} className="bg-gray-100 px-3 py-1 rounded-lg text-sm">
+                          {item.product?.name} <span className="text-gray-400">x{item.quantity}</span>
                         </span>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="text-right ml-4">
+                <div className="text-right ml-4 min-w-[120px]">
                   <p className="text-2xl font-bold text-primary">
-                    Rp{order.total.toLocaleString()}
+                    Rp{order.total?.toLocaleString()}
                   </p>
-                  <div className="mt-2 space-y-1">
-                    {order.status === 'PENDING' && (
-                      <>
-                        <button
-                          onClick={() => handleStatusUpdate(order.id, 'PROCESSING')}
-                          className="w-full btn-primary text-xs py-1.5"
-                        >
-                          Proses Pesanan
-                        </button>
-                        <button
-                          onClick={() => handleStatusUpdate(order.id, 'CANCELLED')}
-                          className="w-full bg-red-500 text-white text-xs py-1.5 rounded-lg hover:bg-red-600 transition"
-                        >
-                          Batalkan
-                        </button>
-                      </>
-                    )}
-                    {order.status === 'PROCESSING' && (
-                      <button
-                        onClick={() => handleStatusUpdate(order.id, 'SHIPPED')}
-                        className="w-full btn-primary text-xs py-1.5"
-                      >
-                        Kirim Pesanan
-                      </button>
-                    )}
-                    {order.status === 'SHIPPED' && (
-                      <button
-                        onClick={() => handleStatusUpdate(order.id, 'DELIVERED')}
-                        className="w-full bg-green-500 text-white text-xs py-1.5 rounded-lg hover:bg-green-600 transition"
-                      >
-                        Selesai
-                      </button>
-                    )}
-                    <button className="w-full btn-secondary text-xs py-1.5">
-                      <EyeIcon className="w-4 h-4 inline mr-1" />
-                      Detail
-                    </button>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {getStatusActions(order)}
                   </div>
                 </div>
               </div>

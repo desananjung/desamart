@@ -17,7 +17,6 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   // Jika ada role yang diizinkan, cek role user
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    // Role tidak diizinkan, redirect ke dashboard
     return <Navigate to="/dashboard" replace />;
   }
 

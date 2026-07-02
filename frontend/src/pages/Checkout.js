@@ -8,6 +8,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     address: '',
     phone: '',
@@ -33,21 +34,31 @@ const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.address || !form.phone) {
-      alert('Alamat dan nomor telepon wajib diisi');
+    
+    if (!form.address.trim()) {
+      alert('Alamat pengiriman wajib diisi');
+      return;
+    }
+    if (!form.phone.trim()) {
+      alert('Nomor telepon wajib diisi');
       return;
     }
 
+    setSubmitting(true);
     try {
       const res = await api.post('/orders', {
         address: form.address,
         phone: form.phone,
         note: form.note
       });
+      
       alert('✅ Pesanan berhasil dibuat! Silakan lakukan pembayaran.');
       navigate('/payment');
     } catch (error) {
-      alert(error.response?.data?.message || 'Gagal checkout');
+      console.error('Checkout error:', error);
+      alert(error.response?.data?.message || 'Gagal checkout. Silakan coba lagi.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -78,6 +89,20 @@ const Checkout = () => {
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">📦 Checkout</h1>
       
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
+        <h3 className="font-semibold mb-3">Ringkasan Pesanan</h3>
+        {cart.items.map((item) => (
+          <div key={item.id} className="flex justify-between py-2 border-b border-gray-100">
+            <span>{item.product?.name} x{item.quantity}</span>
+            <span className="font-medium">Rp{(item.product?.price * item.quantity).toLocaleString()}</span>
+          </div>
+        ))}
+        <div className="flex justify-between pt-3 font-bold">
+          <span>Total</span>
+          <span className="text-primary">Rp{total.toLocaleString()}</span>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="space-y-4">
           <div>
@@ -89,7 +114,7 @@ const Checkout = () => {
               onChange={(e) => setForm({ ...form, address: e.target.value })}
               className="input-field"
               rows="3"
-              placeholder="Masukkan alamat lengkap"
+              placeholder="Masukkan alamat lengkap (jalan, rt/rw, kelurahan, kecamatan, kabupaten)"
               required
             />
           </div>
@@ -117,23 +142,16 @@ const Checkout = () => {
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
               className="input-field"
-              placeholder="Catatan untuk penjual"
+              placeholder="Catatan untuk penjual (contoh: pintu belakang)"
             />
-          </div>
-
-          <div className="border-t border-gray-100 pt-4">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total Pesanan</span>
-              <span className="text-primary">Rp{(total + 20000)?.toLocaleString()}</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-1">*Termasuk ongkos kirim Rp20.000</p>
           </div>
 
           <button
             type="submit"
+            disabled={submitting}
             className="btn-primary w-full py-3 text-lg"
           >
-            💳 Buat Pesanan
+            {submitting ? 'Memproses...' : '💳 Buat Pesanan & Lanjutkan Pembayaran'}
           </button>
         </div>
       </form>

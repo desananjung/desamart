@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { CreditCardIcon, CheckCircleIcon, ClockIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { CreditCardIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 const Payment = () => {
   const { user } = useAuth();
@@ -13,58 +13,122 @@ const Payment = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [shippingMethod, setShippingMethod] = useState('jne');
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [banks, setBanks] = useState([]);
+  const [selectedBank, setSelectedBank] = useState('');
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await api.get('/orders');
-        const pendingOrders = res.data.data?.filter(o => o.status === 'PENDING') || [];
-        setOrders(pendingOrders);
-        if (pendingOrders.length > 0) {
-          setSelectedOrder(pendingOrders[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrders();
-  }, []);
-
-  const handlePayment = async () => {
-    if (!selectedOrder) {
-      alert('Pilih pesanan terlebih dahulu');
-      return;
-    }
-
-    setProcessing(true);
+  const fetchData = async () => {
     try {
-      const res = await api.put(`/orders/${selectedOrder.id}/payment`, {
-        paymentMethod,
-        shippingMethod
-      });
+      setLoading(true);
       
-      alert('✅ Pembayaran berhasil! Pesanan akan segera diproses.');
-      navigate('/orders');
+      // Fetch orders
+      const ordersRes = await api.get('/orders');
+      const pendingOrders = ordersRes.data.data?.filter(o => o.status === 'PENDING') || [];
+      setOrders(pendingOrders);
+      if (pendingOrders.length > 0) {
+        setSelectedOrder(pendingOrders[0]);
+      }
+
+      // Fetch payment methods
+      try {
+        const methodsRes = await api.get('/payments/methods');
+        setPaymentMethods(methodsRes.data.data || []);
+      } catch (err) {
+        console.warn('Payment methods not available');
+        // Set default methods
+        setPaymentMethods([
+          { id: 1, code: 'bank_transfer', name: 'BANK_TRANSFER', description: 'Transfer Bank' },
+          { id: 2, code: 'qris', name: 'QRIS', description: 'QR Code Payment' },
+          { id: 3, code: 'cod', name: 'COD', description: 'Cash on Delivery' }
+        ]);
+      }
+
+      // Fetch banks
+      try {
+        const banksRes = await api.get('/payments/banks');
+        setBanks(banksRes.data.data || []);
+        if (banksRes.data.data?.length > 0) {
+          setSelectedBank(String(banksRes.data.data[0].id));
+        }
+      } catch (err) {
+        console.warn('Banks not available');
+        setBanks([
+          { id: 1, bankName: 'BCA', accountNumber: '1234567890', accountHolder: 'DesaMart Official' },
+          { id: 2, bankName: 'Mandiri', accountNumber: '0987654321', accountHolder: 'DesaMart Official' },
+          { id: 3, bankName: 'BNI', accountNumber: '5678901234', accountHolder: 'DesaMart Official' }
+        ]);
+        setSelectedBank('1');
+      }
+
     } catch (error) {
-      console.error('Payment error:', error);
-      alert(error.response?.data?.message || 'Gagal memproses pembayaran');
+      console.error('Error fetching payment data:', error);
     } finally {
-      setProcessing(false);
+      setLoading(false);
     }
   };
+  fetchData();
+}, []);
 
-  const paymentMethods = [
-    { id: 'bank_transfer', label: '🏦 Transfer Bank', desc: 'Transfer ke rekening DesaMart', icon: '🏦' },
-    { id: 'qris', label: '📱 QRIS', desc: 'Scan QR code untuk pembayaran', icon: '📱' },
+  const handlePayment = async () => {
+  if (!selectedOrder) {
+    alert('Pilih pesanan terlebih dahulu');
+    return;
+  }
+
+  if (paymentMethod === 'bank_transfer' && !selectedBank) {
+    alert('Pilih rekening tujuan transfer');
+    return;
+  }
+
+  setProcessing(true);
+  try {
+    const payload = {
+      method: paymentMethod,
+      bankAccountId: selectedBank || null
+    };
+
+    const res = await api.post(`/payments/process/${selectedOrder.id}`, payload);
+    
+    // Tampilkan instruksi pembayaran
+    let message = '✅ Pembayaran berhasil diproses!\n\n';
+    
+    if (paymentMethod === 'bank_transfer') {
+      const bank = banks.find(b => b.id === parseInt(selectedBank));
+      message += `💳 Transfer ke rekening:\n`;
+      message += `🏦 Bank: ${bank?.bankName}\n`;
+      message += `📋 No. Rekening: ${bank?.accountNumber}\n`;
+      message += `👤 A/n: ${bank?.accountHolder}\n\n`;
+      message += `💰 Total: Rp${selectedOrder.total.toLocaleString()}\n`;
+      message += `📝 Upload bukti transfer di halaman detail pesanan`;
+    } else if (paymentMethod === 'qris') {
+      message += `📱 Scan QRIS untuk pembayaran\n`;
+      message += `💰 Total: Rp${selectedOrder.total.toLocaleString()}`;
+    } else if (paymentMethod === 'cod') {
+      message += `💵 Bayar saat pesanan tiba (COD)\n`;
+      message += `💰 Total: Rp${selectedOrder.total.toLocaleString()}`;
+    }
+    
+    alert(message);
+    navigate('/orders');
+  } catch (error) {
+    console.error('Payment error:', error);
+    alert(error.response?.data?.message || 'Gagal memproses pembayaran');
+  } finally {
+    setProcessing(false);
+  }
+};
+
+  const paymentMethodOptions = [
+    { id: 'bank_transfer', label: '🏦 Transfer Bank', desc: 'Transfer ke rekening kami', icon: '🏦' },
+    { id: 'qris', label: '📱 QRIS', desc: 'Scan QR code pembayaran', icon: '📱' },
     { id: 'cod', label: '💵 COD', desc: 'Bayar saat barang diterima', icon: '💵' }
   ];
 
-  const shippingMethods = [
-    { id: 'jne', label: 'JNE', desc: 'Pengiriman cepat 1-3 hari', cost: 'Rp25.000', icon: '🚚' },
-    { id: 'pos', label: 'POS Indonesia', desc: 'Pengiriman ekonomis 3-5 hari', cost: 'Rp15.000', icon: '📮' },
-    { id: 'grab', label: 'GrabExpress', desc: 'Pengiriman instan 1-2 jam', cost: 'Rp35.000', icon: '🛵' }
+  const shippingOptions = [
+    { id: 'jne', label: 'JNE', desc: 'Pengiriman cepat 1-3 hari', cost: 'Rp25.000' },
+    { id: 'pos', label: 'POS Indonesia', desc: 'Pengiriman ekonomis 3-5 hari', cost: 'Rp15.000' },
+    { id: 'grab', label: 'GrabExpress', desc: 'Pengiriman instan 1-2 jam', cost: 'Rp35.000' }
   ];
 
   const getShippingCost = (method) => {
@@ -85,25 +149,8 @@ const Payment = () => {
       <div className="text-center py-12">
         <span className="text-6xl block mb-4">💳</span>
         <h2 className="text-2xl font-bold">Belum Ada Pesanan untuk Dibayar</h2>
-        <p className="text-gray-500 mt-2">
-          Anda belum memiliki pesanan yang menunggu pembayaran.
-        </p>
-        <div className="mt-6 space-y-3">
-          <p className="text-sm text-gray-400">📋 Langkah-langkah:</p>
-          <ol className="text-sm text-gray-500 text-left max-w-xs mx-auto space-y-1">
-            <li>1. 🛒 Tambahkan produk ke keranjang</li>
-            <li>2. 📦 Lakukan checkout dari halaman keranjang</li>
-            <li>3. 💳 Lakukan pembayaran di halaman ini</li>
-          </ol>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-            <Link to="/cart" className="btn-primary inline-block">
-              🛒 Lihat Keranjang
-            </Link>
-            <Link to="/marketplace" className="btn-secondary inline-block">
-              🛍️ Belanja Sekarang
-            </Link>
-          </div>
-        </div>
+        <p className="text-gray-500 mt-2">Silakan checkout terlebih dahulu</p>
+        <Link to="/cart" className="btn-primary inline-block mt-4">🛒 Lihat Keranjang</Link>
       </div>
     );
   }
@@ -142,9 +189,7 @@ const Payment = () => {
                       <p className="text-sm text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString('id-ID')}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {order.items?.length} item
-                      </p>
+                      <p className="text-sm text-gray-500">{order.items?.length} item</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-primary">
@@ -161,11 +206,11 @@ const Payment = () => {
             </div>
           </div>
 
-          {/* Payment Methods */}
+          {/* Payment Methods dengan Bank */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h3 className="font-bold mb-4">💳 Metode Pembayaran</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {paymentMethods.map(method => (
+              {paymentMethodOptions.map(method => (
                 <button
                   key={method.id}
                   onClick={() => setPaymentMethod(method.id)}
@@ -181,13 +226,69 @@ const Payment = () => {
                 </button>
               ))}
             </div>
+
+            {/* Bank Accounts - hanya untuk Bank Transfer */}
+            {paymentMethod === 'bank_transfer' && banks.length > 0 && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                <p className="text-sm font-medium mb-3">🏦 Rekening Tujuan</p>
+                <div className="space-y-2">
+                  {banks.map(bank => (
+                    <label key={bank.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-primary cursor-pointer">
+                      <input
+                        type="radio"
+                        name="bank"
+                        value={bank.id}
+                        checked={selectedBank === String(bank.id)}
+                        onChange={() => setSelectedBank(String(bank.id))}
+                        className="w-4 h-4 text-primary"
+                      />
+                      <div>
+                        <p className="font-medium">{bank.bankName}</p>
+                        <p className="text-sm text-gray-600">{bank.accountNumber}</p>
+                        <p className="text-xs text-gray-500">A/n: {bank.accountHolder}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* QRIS Info */}
+            {paymentMethod === 'qris' && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-xl text-center">
+                <p className="text-2xl mb-2">📱</p>
+                <p className="font-medium">Scan QRIS untuk pembayaran</p>
+                <p className="text-sm text-gray-500">Gunakan aplikasi e-wallet atau mobile banking</p>
+                <div className="mt-3 p-4 bg-white rounded-lg border border-gray-200 inline-block">
+                  <img 
+                    src="https://via.placeholder.com/150x150?text=QRIS" 
+                    alt="QRIS" 
+                    className="w-32 h-32"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Kode QR akan aktif selama 24 jam</p>
+              </div>
+            )}
+
+            {/* COD Info */}
+            {paymentMethod === 'cod' && (
+              <div className="mt-4 p-4 bg-green-50 rounded-xl">
+                <p className="font-medium">💵 Cash on Delivery (COD)</p>
+                <p className="text-sm text-gray-600">Bayar saat pesanan tiba di alamat Anda</p>
+                <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                  <li>✅ Siapkan uang pas</li>
+                  <li>✅ Cek barang sebelum bayar</li>
+                  <li>✅ Biaya admin Rp5.000</li>
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Shipping Methods */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h3 className="font-bold mb-4">🚚 Metode Pengiriman</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {shippingMethods.map(method => (
+              {shippingOptions.map(method => (
                 <button
                   key={method.id}
                   onClick={() => setShippingMethod(method.id)}
@@ -197,7 +298,7 @@ const Payment = () => {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <p className="text-2xl">{method.icon}</p>
+                  <p className="text-2xl">{method.id === 'jne' ? '🚚' : method.id === 'pos' ? '📮' : '🛵'}</p>
                   <p className="font-medium mt-1">{method.label}</p>
                   <p className="text-xs text-gray-500">{method.desc}</p>
                   <p className="text-xs font-bold text-primary mt-1">{method.cost}</p>
@@ -226,10 +327,6 @@ const Payment = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-500">Metode Pembayaran</span>
                     <span className="capitalize">{paymentMethod.replace('_', ' ')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Metode Pengiriman</span>
-                    <span className="uppercase">{shippingMethod}</span>
                   </div>
                 </div>
 

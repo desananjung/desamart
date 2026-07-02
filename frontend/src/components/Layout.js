@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 import { 
   ShoppingCartIcon, 
   MagnifyingGlassIcon,
   ChevronDownIcon,
   HeartIcon,
-  BellIcon,
   Bars3Icon,
-  XMarkIcon,
-  UserIcon
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import AIChatbot from './AIChatbot';
@@ -144,16 +143,13 @@ const Layout = ({ children }) => {
 
               {/* Right Menu */}
               <div className="flex items-center space-x-1 md:space-x-3">
+                {/* Notification Bell */}
+                <NotificationBell />
+
                 {/* Wishlist */}
                 <Link to="/wishlist" className="hidden md:flex p-2.5 hover:bg-gray-100 rounded-full transition relative">
                   <HeartIcon className="w-6 h-6 text-gray-600 hover:text-primary transition" />
                 </Link>
-
-                {/* Notification */}
-                <button className="hidden md:flex p-2.5 hover:bg-gray-100 rounded-full transition relative">
-                  <BellIcon className="w-6 h-6 text-gray-600 hover:text-primary transition" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
 
                 {/* Cart */}
                 <Link to="/cart" className="relative p-2.5 hover:bg-gray-100 rounded-full transition">
@@ -195,16 +191,17 @@ const Layout = ({ children }) => {
                       </Link>
 
                       {(user.role === 'SELLER' || user.role === 'ADMIN') && (
-                        <Link to="/umkm" className="block px-4 py-2.5 hover:bg-gray-50 transition flex items-center space-x-3">
-                          <span className="text-gray-500">🏪</span>
-                          <span>UMKM Dashboard</span>
-                        </Link>
+                        <>
+                          <Link to="/umkm" className="block px-4 py-2.5 hover:bg-gray-50 transition flex items-center space-x-3">
+                            <span className="text-gray-500">🏪</span>
+                            <span>UMKM Dashboard</span>
+                          </Link>
+                          <Link to="/seller/orders" className="block px-4 py-2.5 hover:bg-gray-50 transition flex items-center space-x-3">
+                            <span className="text-gray-500">📋</span>
+                            <span>Pesanan Masuk</span>
+                          </Link>
+                        </>
                       )}
-
-                      <Link to="/seller" className="block px-4 py-2.5 hover:bg-gray-50 transition flex items-center space-x-3">
-                        <span className="text-gray-500">📊</span>
-                        <span>Dashboard Penjual</span>
-                      </Link>
 
                       <Link to="/wishlist" className="block px-4 py-2.5 hover:bg-gray-50 transition flex items-center space-x-3">
                         <HeartIcon className="w-5 h-5 text-gray-500" />

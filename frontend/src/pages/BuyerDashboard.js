@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { ShoppingBagIcon, HeartIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
 
@@ -8,6 +8,7 @@ const BuyerDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     orders: 0,
+    totalSpent: 0,
     wishlist: 0,
     cart: 0
   });
@@ -15,13 +16,14 @@ const BuyerDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [ordersRes, wishlistRes, cartRes] = await Promise.all([
-          api.get('/orders'),
+        const [statsRes, wishlistRes, cartRes] = await Promise.all([
+          api.get('/dashboard/stats'),
           api.get('/buyer/wishlist'),
           api.get('/cart')
         ]);
         setStats({
-          orders: ordersRes.data.data?.length || 0,
+          orders: statsRes.data.data?.orders || 0,
+          totalSpent: statsRes.data.data?.totalSpent || 0,
           wishlist: wishlistRes.data.data?.length || 0,
           cart: cartRes.data.data?.items?.length || 0
         });
@@ -33,9 +35,9 @@ const BuyerDashboard = () => {
   }, []);
 
   const cards = [
-    { icon: ShoppingBagIcon, label: 'Pesanan', value: stats.orders, link: '/orders', color: 'text-blue-500', bg: 'bg-blue-50' },
+    { icon: ShoppingBagIcon, label: 'Total Belanja', value: `Rp${stats.totalSpent.toLocaleString()}`, link: '/orders', color: 'text-blue-500', bg: 'bg-blue-50' },
+    { icon: ClockIcon, label: 'Pesanan', value: stats.orders, link: '/orders', color: 'text-green-500', bg: 'bg-green-50' },
     { icon: HeartIcon, label: 'Wishlist', value: stats.wishlist, link: '/wishlist', color: 'text-red-500', bg: 'bg-red-50' },
-    { icon: ClockIcon, label: 'Keranjang', value: stats.cart, link: '/cart', color: 'text-green-500', bg: 'bg-green-50' },
     { icon: UserIcon, label: 'Profil', value: 'Edit', link: '/profile', color: 'text-purple-500', bg: 'bg-purple-50' },
   ];
 
@@ -64,7 +66,7 @@ const BuyerDashboard = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h3 className="font-bold mb-4">⚡ Akses Cepat</h3>
           <div className="space-y-2">
-            <Link to="/products" className="block p-3 hover:bg-gray-50 rounded-lg transition">🛍️ Belanja Sekarang</Link>
+            <Link to="/marketplace" className="block p-3 hover:bg-gray-50 rounded-lg transition">🛍️ Belanja Sekarang</Link>
             <Link to="/cart" className="block p-3 hover:bg-gray-50 rounded-lg transition">🛒 Lihat Keranjang</Link>
             <Link to="/orders" className="block p-3 hover:bg-gray-50 rounded-lg transition">📦 Cek Pesanan</Link>
             <Link to="/wishlist" className="block p-3 hover:bg-gray-50 rounded-lg transition">❤️ Wishlist</Link>

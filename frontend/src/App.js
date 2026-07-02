@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'; // ← Tambahkan Link di sini
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleProtectedRoute from './components/RoleProtectedRoute'; // ← TAMBAHKAN INI
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -20,6 +21,13 @@ import ProductForm from './pages/ProductForm';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import ProductDetail from './pages/ProductDetail';
+import VillageMap from './pages/VillageMap';
+import VillageGovernmentDashboard from './pages/VillageGovernmentDashboard';
+import UMKMPrograms from './pages/UMKMPrograms';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
+import SellerOrders from './pages/SellerOrders'; // ← TAMBAHKAN INI
+//import Wishlist from './pages/Wishlist'; //
 
 // Feature data
 const features = [
@@ -223,11 +231,11 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/umkm/register" element={
-  <ProtectedRoute>
-    <UMKMRegister />
-  </ProtectedRoute>
-} />
-<Route path="/products" element={
+              <ProtectedRoute>
+                <UMKMRegister />
+              </ProtectedRoute>
+            } />
+            <Route path="/products" element={
               <ProtectedRoute>
                 <ProductList />
               </ProtectedRoute>
@@ -235,32 +243,57 @@ function App() {
             
             {/* /products/new - harus terdaftar dan bisa diakses SELLER */}
             <Route path="/products/new" element={
-              <ProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
+              <RoleProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
                 <ProductForm />
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             } />
             
             <Route path="/products/edit/:id" element={
-              <ProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
+              <RoleProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
                 <ProductForm />
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             } />
             <Route path="/cart" element={
+              <ProtectedRoute>
+                <Cart />
+              </ProtectedRoute>
+            } />
+            <Route path="/checkout" element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            } />
+            <Route path="/product/:id" element={
+              <ProtectedRoute>
+                <ProductDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/village/map" element={
+              <ProtectedRoute>
+                <VillageMap />
+              </ProtectedRoute>
+            } />
+            <Route path="/village/government" element={
+              <RoleProtectedRoute allowedRoles={['ADMIN']}>
+                <VillageGovernmentDashboard />
+              </RoleProtectedRoute>
+            } />
+            <Route path="/umkm/programs" element={
+              <ProtectedRoute>
+                <UMKMPrograms />
+              </ProtectedRoute>
+            } />
+            <Route path="/orders/:id" element={
   <ProtectedRoute>
-    <Cart />
+    <OrderDetail />
   </ProtectedRoute>
 } />
-<Route path="/checkout" element={
-  <ProtectedRoute>
-    <Checkout />
-  </ProtectedRoute>
-} />
-<Route path="/product/:id" element={
-  <ProtectedRoute>
-    <ProductDetail />
-  </ProtectedRoute>
-} />
-
+<Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+ <Route path="/seller/orders" element={
+  <RoleProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
+    <SellerOrders />
+  </RoleProtectedRoute>
+} />           
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

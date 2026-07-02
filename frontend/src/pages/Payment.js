@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+// import { useAuth } from '../context/AuthContext';//
 import api from '../services/api';
 import { CreditCardIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 const Payment = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth(); //
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -13,7 +13,7 @@ const Payment = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [shippingMethod, setShippingMethod] = useState('jne');
-  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [, setPaymentMethods] = useState([]);
   const [banks, setBanks] = useState([]);
   const [selectedBank, setSelectedBank] = useState('');
 
@@ -88,7 +88,7 @@ const Payment = () => {
       bankAccountId: selectedBank || null
     };
 
-    const res = await api.post(`/payments/process/${selectedOrder.id}`, payload);
+    await api.post(`/payments/process/${selectedOrder.id}`, payload);
     
     // Tampilkan instruksi pembayaran
     let message = '✅ Pembayaran berhasil diproses!\n\n';

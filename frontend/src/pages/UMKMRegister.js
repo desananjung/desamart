@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -75,7 +75,7 @@ const UMKMRegister = () => {
         socialMedia: JSON.stringify(form.socialMedia)
       };
 
-      const res = await api.post('/umkm/register', payload);
+      await api.post('/umkm/register', payload);
       alert('✅ Registrasi UMKM berhasil! Silakan tunggu verifikasi dari admin.');
       navigate('/umkm');
     } catch (error) {

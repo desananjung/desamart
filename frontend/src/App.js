@@ -38,6 +38,7 @@ import AgricultureFarms from './pages/AgricultureFarms';
 import AgricultureFarmNew from './pages/AgricultureFarmNew';
 import AgriculturePrices from './pages/AgriculturePrices';
 import AgricultureSeasons from './pages/AgricultureSeasons';
+import KoperasiRegister from './pages/KoperasiRegister';
 
 // Feature data
 const features = [
@@ -301,7 +302,12 @@ function App() {
             
             {/* Koperasi */}
             <Route path="/koperasi" element={<ProtectedRoute><Koperasi /></ProtectedRoute>} />
-            
+            <Route path="/koperasi/register" element={
+  <ProtectedRoute>
+    <KoperasiRegister />
+  </ProtectedRoute>
+} />
+
             {/* Layanan Desa */}
             <Route path="/layanan-desa" element={<ProtectedRoute><LayananDesa /></ProtectedRoute>} />
             <Route path="/village/map" element={<ProtectedRoute><VillageMap /></ProtectedRoute>} />

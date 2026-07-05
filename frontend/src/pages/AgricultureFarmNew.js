@@ -16,6 +16,10 @@ const AgricultureFarmNew = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('📝 Form data:', form);
+    console.log('🔑 Token:', localStorage.getItem('token') ? 'Ada' : 'Tidak ada');
+    
+    // Validasi
     if (!form.name.trim()) {
       alert('Nama lahan wajib diisi');
       return;
@@ -31,11 +35,30 @@ const AgricultureFarmNew = () => {
 
     setLoading(true);
     try {
-      await api.post('/agriculture/farms', form);
+      const payload = {
+        ...form,
+        area: parseFloat(form.area)
+      };
+      
+      console.log('📤 Sending payload:', payload);
+      
+      const response = await api.post('/agriculture/farms', payload);
+      console.log('✅ Response:', response.data);
+      
       alert('✅ Lahan berhasil ditambahkan!');
       navigate('/agriculture/farms');
     } catch (error) {
-      alert(error.response?.data?.message || 'Gagal menambahkan lahan');
+      console.error('❌ Error:', error);
+      console.error('❌ Response:', error.response?.data);
+      console.error('❌ Status:', error.response?.status);
+      
+      if (error.response?.status === 401) {
+        alert('Session expired. Silakan login kembali.');
+        navigate('/login');
+        return;
+      }
+      
+      alert(error.response?.data?.message || 'Gagal menambahkan lahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }

@@ -40,4 +40,27 @@ router.get('/products', async (req, res, next) => {
   }
 });
 
+// ========== GET SELLER STORES ==========
+router.get('/stores', async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    
+    const stores = await prisma.store.findMany({
+      where: { sellerId: userId },
+      include: {
+        products: {
+          take: 3,
+          orderBy: { createdAt: 'desc' }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    success(res, 'Daftar toko', stores);
+  } catch (error) {
+    console.error('Error fetching seller stores:', error);
+    next(error);
+  }
+});
+
 module.exports = router;

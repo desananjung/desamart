@@ -1,31 +1,60 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
-const { success } = require('../utils/responseHelper'); // TAMBAHKAN INI
+const { success } = require('../utils/responseHelper');
 const categoryController = require('../controllers/categoryController');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 const router = express.Router();
 
 // Semua route di sini hanya bisa diakses oleh ADMIN
 router.use(authenticate, authorize('ADMIN'));
 
+// ============================================
+// DASHBOARD
+// ============================================
 router.get('/dashboard', (req, res) => {
   success(res, 'Admin dashboard', { user: req.user });
 });
 
-// Contoh: mengelola semua user
+// ============================================
+// USERS - Dengan search
+// ============================================
 router.get('/users', async (req, res, next) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    const { search } = req.query;
+    const where = {};
+    
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+    
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, createdAt: true }
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true
+      },
+      take: search ? 10 : 100,
+      orderBy: { createdAt: 'desc' }
     });
-    success(res, 'Daftar semua user', users);
+    
+    success(res, 'Daftar user', users);
   } catch (error) {
+    console.error('Error fetching users:', error);
     next(error);
   }
 });
 
-// Routes kategori (admin only)
+// ============================================
+// CATEGORIES
+// ============================================
 router.get('/categories', categoryController.getAll);
 router.get('/categories/:id', categoryController.getById);
 router.post('/categories', categoryController.create);

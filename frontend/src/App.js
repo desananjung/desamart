@@ -29,6 +29,15 @@ import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import SellerOrders from './pages/SellerOrders';
 import Wishlist from './pages/Wishlist';
+import EnterpriseProducts from './pages/EnterpriseProducts';
+import EnterpriseStores from './pages/EnterpriseStores';
+import EnterpriseOrders from './pages/EnterpriseOrders';
+import EnterpriseMembers from './pages/EnterpriseMembers';
+import EnterpriseEdit from './pages/EnterpriseEdit';
+import AgricultureFarms from './pages/AgricultureFarms';
+import AgricultureFarmNew from './pages/AgricultureFarmNew';
+import AgriculturePrices from './pages/AgriculturePrices';
+import AgricultureSeasons from './pages/AgricultureSeasons';
 
 // Feature data
 const features = [
@@ -299,9 +308,54 @@ function App() {
             
             {/* Enterprise */}
             <Route path="/enterprise" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
-            
+            <Route path="/enterprise/products" element={
+  <ProtectedRoute>
+    <EnterpriseProducts />
+  </ProtectedRoute>
+} />
+<Route path="/enterprise/stores" element={
+  <ProtectedRoute>
+    <EnterpriseStores />
+  </ProtectedRoute>
+} />
+<Route path="/enterprise/orders" element={
+  <ProtectedRoute>
+    <EnterpriseOrders />
+  </ProtectedRoute>
+} />
+<Route path="/enterprise/members" element={
+  <ProtectedRoute>
+    <EnterpriseMembers />
+  </ProtectedRoute>
+} />
+<Route path="/enterprise/edit" element={
+  <ProtectedRoute>
+    <EnterpriseEdit />
+  </ProtectedRoute>
+} />
+
             {/* Pertanian */}
             <Route path="/pertanian" element={<ProtectedRoute><Pertanian /></ProtectedRoute>} />
+            <Route path="/agriculture/farms" element={
+  <ProtectedRoute>
+    <AgricultureFarms />
+  </ProtectedRoute>
+} />
+<Route path="/agriculture/farms/new" element={
+  <ProtectedRoute>
+    <AgricultureFarmNew />
+  </ProtectedRoute>
+} />
+<Route path="/agriculture/prices" element={
+  <ProtectedRoute>
+    <AgriculturePrices />
+  </ProtectedRoute>
+} />
+<Route path="/agriculture/seasons" element={
+  <ProtectedRoute>
+    <AgricultureSeasons />
+  </ProtectedRoute>
+} />
 
             {/* ============================================ */}
             {/* ROLE PROTECTED - Seller/Admin hanya */}

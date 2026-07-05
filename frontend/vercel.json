@@ -1,8 +1,5 @@
 {
-  "buildCommand": "DISABLE_ESLINT_PLUGIN=true npm run build",
-  "outputDirectory": "build",
   "env": {
-    "REACT_APP_API_URL": "https://3a2e-182-10-131-61.ngrok-free.app/api"
-  },
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+    "REACT_APP_API_URL": "https://830f-182-10-131-61.ngrok-free.app/api"
+  }
 }

@@ -147,14 +147,17 @@ const Layout = ({ children }) => {
                 <NotificationBell />
 
                 {/* Wishlist */}
-                <Link to="/wishlist" className="hidden md:flex p-2.5 hover:bg-gray-100 rounded-full transition relative">
+                <Link to="/wishlist" className="p-2.5 hover:bg-gray-100 rounded-full transition">
                   <HeartIcon className="w-6 h-6 text-gray-600 hover:text-primary transition" />
                 </Link>
 
                 {/* Cart */}
-                <Link to="/cart" className="relative p-2.5 hover:bg-gray-100 rounded-full transition">
+                <Link 
+                  to="/cart" 
+                  className="relative p-2.5 hover:bg-gray-100 rounded-full transition"
+                >
                   <ShoppingCartIcon className="w-6 h-6 text-gray-600 hover:text-primary transition" />
-                  {cartCount > 0 && (
+                  {user && cartCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-primary text-white text-xs w-5 h-5 flex items-center justify-center rounded-full shadow-md">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
@@ -334,7 +337,7 @@ const Layout = ({ children }) => {
 
             <div className="border-t mt-8 pt-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
               <p className="text-sm text-gray-500">
-                © 2026 DesaMart. All rights reserved.
+                © 2026 DesaMart. All rights reserved.      (UdenMS)
               </p>
               <div className="flex space-x-6 text-sm text-gray-500">
                 <span>🇮🇩 Indonesia</span>

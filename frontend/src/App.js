@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
-import RoleProtectedRoute from './components/RoleProtectedRoute'; // ← TAMBAHKAN INI
+import RoleProtectedRoute from './components/RoleProtectedRoute';
+import api from './services/api'; // ← TAMBAHKAN INI
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -26,8 +27,8 @@ import VillageGovernmentDashboard from './pages/VillageGovernmentDashboard';
 import UMKMPrograms from './pages/UMKMPrograms';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
-import SellerOrders from './pages/SellerOrders'; // ← TAMBAHKAN INI
-//import Wishlist from './pages/Wishlist'; //
+import SellerOrders from './pages/SellerOrders';
+import Wishlist from './pages/Wishlist';
 
 // Feature data
 const features = [
@@ -40,10 +41,14 @@ const features = [
   { id: 'pertanian', icon: '🌾', title: 'Pasar Tani Digital', desc: 'Jual beli hasil pertanian & perkebunan', color: 'from-emerald-500 to-emerald-600', path: '/pertanian' }
 ];
 
-// Landing Page Component
+// ============================================
+// LANDING PAGE COMPONENT - HANYA SATU
+// ============================================
 const LandingPage = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Buka modal login jika di halaman /login
   useEffect(() => {
@@ -56,6 +61,21 @@ const LandingPage = () => {
       }
     }
   }, [location.pathname]);
+
+  // Fetch produk
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await api.get('/products');
+        setProducts(res.data.data || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   return (
     <div>
@@ -174,128 +194,143 @@ const LandingPage = () => {
           )}
         </div>
       </section>
+
+      {/* ============================================ */}
+      {/* PRODUK TERBARU DI LANDING PAGE */}
+      {/* ============================================ */}
+      <section className="py-12 bg-white">
+        <div className="container-custom">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">🔥 Produk Terbaru</h2>
+            <Link to="/products" className="text-primary hover:underline text-sm">
+              Lihat Semua →
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              Belum ada produk. Jadi yang pertama!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {products.slice(0, 8).map((product) => (
+                <Link 
+                  key={product.id} 
+                  to={`/product/${product.id}`}
+                  className="group bg-gray-50 rounded-xl overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1"
+                >
+                  <div className="h-40 bg-gray-200 flex items-center justify-center">
+                    {product.imageUrl ? (
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://picsum.photos/seed/1/300/200';
+                        }}
+                      />
+                    ) : (
+                      <span className="text-4xl">📦</span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-semibold text-sm line-clamp-1">{product.name}</h3>
+                    <p className="text-primary font-bold">Rp{product.price?.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">{product.category?.name}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };
 
+// ============================================
+// APP COMPONENT
+// ============================================
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Layout>
           <Routes>
-            {/* Public */}
+            {/* ============================================ */}
+            {/* PUBLIC ROUTES - Bisa diakses semua orang */}
+            {/* ============================================ */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LandingPage />} />
             <Route path="/register" element={<LandingPage />} />
-
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/marketplace" element={
-              <ProtectedRoute>
-                <Marketplace />
-              </ProtectedRoute>
-            } />
-            <Route path="/payment" element={
-              <ProtectedRoute>
-                <Payment />
-              </ProtectedRoute>
-            } />
-            <Route path="/umkm" element={
-              <ProtectedRoute>
-                <UMKM />
-              </ProtectedRoute>
-            } />
-            <Route path="/koperasi" element={
-              <ProtectedRoute>
-                <Koperasi />
-              </ProtectedRoute>
-            } />
-            <Route path="/layanan-desa" element={
-              <ProtectedRoute>
-                <LayananDesa />
-              </ProtectedRoute>
-            } />
-            <Route path="/enterprise" element={
-              <ProtectedRoute>
-                <Enterprise />
-              </ProtectedRoute>
-            } />
-            <Route path="/pertanian" element={
-              <ProtectedRoute>
-                <Pertanian />
-              </ProtectedRoute>
-            } />
-            <Route path="/umkm/register" element={
-              <ProtectedRoute>
-                <UMKMRegister />
-              </ProtectedRoute>
-            } />
-            <Route path="/products" element={
-              <ProtectedRoute>
-                <ProductList />
-              </ProtectedRoute>
-            } />
             
-            {/* /products/new - harus terdaftar dan bisa diakses SELLER */}
+            {/* ✅ Produk - Publik (tanpa login) */}
+            <Route path="/products" element={<ProductList />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+
+            {/* ============================================ */}
+            {/* PROTECTED ROUTES - WAJIB LOGIN */}
+            {/* ============================================ */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+            <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+            <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+            <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+            <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+            
+            {/* UMKM Routes */}
+            <Route path="/umkm" element={<ProtectedRoute><UMKM /></ProtectedRoute>} />
+            <Route path="/umkm/register" element={<ProtectedRoute><UMKMRegister /></ProtectedRoute>} />
+            <Route path="/umkm/programs" element={<ProtectedRoute><UMKMPrograms /></ProtectedRoute>} />
+            
+            {/* Koperasi */}
+            <Route path="/koperasi" element={<ProtectedRoute><Koperasi /></ProtectedRoute>} />
+            
+            {/* Layanan Desa */}
+            <Route path="/layanan-desa" element={<ProtectedRoute><LayananDesa /></ProtectedRoute>} />
+            <Route path="/village/map" element={<ProtectedRoute><VillageMap /></ProtectedRoute>} />
+            
+            {/* Enterprise */}
+            <Route path="/enterprise" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+            
+            {/* Pertanian */}
+            <Route path="/pertanian" element={<ProtectedRoute><Pertanian /></ProtectedRoute>} />
+
+            {/* ============================================ */}
+            {/* ROLE PROTECTED - Seller/Admin hanya */}
+            {/* ============================================ */}
             <Route path="/products/new" element={
               <RoleProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
                 <ProductForm />
               </RoleProtectedRoute>
             } />
-            
             <Route path="/products/edit/:id" element={
               <RoleProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
                 <ProductForm />
               </RoleProtectedRoute>
             } />
-            <Route path="/cart" element={
-              <ProtectedRoute>
-                <Cart />
-              </ProtectedRoute>
-            } />
-            <Route path="/checkout" element={
-              <ProtectedRoute>
-                <Checkout />
-              </ProtectedRoute>
-            } />
-            <Route path="/product/:id" element={
-              <ProtectedRoute>
-                <ProductDetail />
-              </ProtectedRoute>
-            } />
-            <Route path="/village/map" element={
-              <ProtectedRoute>
-                <VillageMap />
-              </ProtectedRoute>
+            <Route path="/seller/orders" element={
+              <RoleProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
+                <SellerOrders />
+              </RoleProtectedRoute>
             } />
             <Route path="/village/government" element={
               <RoleProtectedRoute allowedRoles={['ADMIN']}>
                 <VillageGovernmentDashboard />
               </RoleProtectedRoute>
             } />
-            <Route path="/umkm/programs" element={
-              <ProtectedRoute>
-                <UMKMPrograms />
-              </ProtectedRoute>
-            } />
-            <Route path="/orders/:id" element={
-  <ProtectedRoute>
-    <OrderDetail />
-  </ProtectedRoute>
-} />
-<Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
- <Route path="/seller/orders" element={
-  <RoleProtectedRoute allowedRoles={['SELLER', 'ADMIN']}>
-    <SellerOrders />
-  </RoleProtectedRoute>
-} />           
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" />} />
+
+            {/* ============================================ */}
+            {/* FALLBACK */}
+            {/* ============================================ */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>
         <AuthModal />

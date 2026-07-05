@@ -6,9 +6,7 @@ exports.getAll = async (req, res, next) => {
     const filters = req.query;
     const products = await productService.getAll(filters);
     success(res, 'Daftar produk', products);
-  } catch (error) { 
-    next(error); 
-  }
+  } catch (error) { next(error); }
 };
 
 exports.getById = async (req, res, next) => {

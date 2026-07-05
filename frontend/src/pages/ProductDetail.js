@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
+import { ShoppingCartIcon } from '@heroicons/react/24/outline'; // ← TAMBAHKAN INI
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -40,6 +41,10 @@ const ProductDetail = () => {
   }, [id, user]);
 
   const toggleWishlist = async () => {
+    if (!user) {
+      navigate('/login', { state: { from: `/product/${id}` } });
+      return;
+    }
     try {
       await api.post('/buyer/wishlist/toggle', { productId: id });
       setIsInWishlist(!isInWishlist);
@@ -50,7 +55,7 @@ const ProductDetail = () => {
 
   const addToCart = async () => {
     if (!user) {
-      navigate('/login');
+      navigate('/login', { state: { from: `/product/${id}` } });
       return;
     }
     setAddingToCart(true);
@@ -59,6 +64,24 @@ const ProductDetail = () => {
       alert('✅ Produk ditambahkan ke keranjang!');
     } catch (error) {
       alert(error.response?.data?.message || 'Gagal menambahkan ke keranjang');
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  // ← TAMBAHKAN FUNGSI BUY NOW
+  const buyNow = async () => {
+    if (!user) {
+      navigate('/login', { state: { from: `/product/${id}` } });
+      return;
+    }
+    // Tambahkan ke keranjang dulu, lalu redirect ke checkout
+    setAddingToCart(true);
+    try {
+      await api.post('/cart/items', { productId: id, quantity: 1 });
+      navigate('/checkout');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Gagal proses pembelian');
     } finally {
       setAddingToCart(false);
     }
@@ -76,12 +99,13 @@ const ProductDetail = () => {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold">Produk tidak ditemukan</h2>
+        <Link to="/products" className="btn-primary inline-block mt-4">Kembali</Link>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-4">
         <Link to="/" className="hover:text-primary">Home</Link>
@@ -172,19 +196,36 @@ const ProductDetail = () => {
                 +
               </button>
             </div>
-            <button
-              onClick={addToCart}
-              disabled={addingToCart || product.stock === 0}
-              className="btn-primary flex-1 py-3 text-lg disabled:opacity-50"
-            >
-              {addingToCart ? 'Menambahkan...' : product.stock === 0 ? 'Stok Habis' : '🛒 Tambah ke Keranjang'}
-            </button>
           </div>
 
-          <div className="mt-4 flex space-x-3">
-            <button className="flex-1 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition">
-              Beli Sekarang
-            </button>
+          {/* Action Buttons */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            {user ? (
+              <>
+                <button
+                  onClick={addToCart}
+                  disabled={addingToCart || product.stock === 0}
+                  className="flex-1 btn-secondary py-3 text-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <ShoppingCartIcon className="w-5 h-5" />
+                  {addingToCart ? 'Menambahkan...' : 'Tambah ke Keranjang'}
+                </button>
+                <button
+                  onClick={buyNow}
+                  disabled={product.stock === 0}
+                  className="flex-1 btn-primary py-3 text-lg disabled:opacity-50"
+                >
+                  {product.stock === 0 ? 'Stok Habis' : 'Beli Sekarang'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => navigate('/login', { state: { from: `/product/${product.id}` } })}
+                className="flex-1 btn-primary py-3 text-lg"
+              >
+                🔑 Login untuk Beli
+              </button>
+            )}
           </div>
         </div>
       </div>

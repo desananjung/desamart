@@ -1,159 +1,151 @@
-const midtransClient = require('midtrans-client');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Konfigurasi Midtrans
-const snap = new midtransClient.Snap({
-  isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
-  serverKey: process.env.MIDTRANS_SERVER_KEY,
-  clientKey: process.env.MIDTRANS_CLIENT_KEY
-});
-
-/**
- * Create payment transaction
- */
-const createPayment = async (orderId, userId) => {
-  try {
-    const order = await prisma.order.findUnique({
-      where: { id: parseInt(orderId) },
-      include: {
-        items: {
-          include: {
-            product: true
+class PaymentService {
+  async getPaymentMethods() {
+    try {
+      const methods = await prisma.paymentMethod.findMany({
+        where: { isActive: true },
+        include: {
+          bankAccounts: {
+            where: { isActive: true }
           }
         },
-        user: true
-      }
-    });
-
-    if (!order) throw new Error('Order tidak ditemukan');
-    if (order.userId !== userId) throw new Error('Anda tidak memiliki akses ke order ini');
-    if (order.paymentStatus === 'PAID') throw new Error('Order sudah dibayar');
-
-    // Buat parameter untuk Midtrans
-    const parameter = {
-      transaction_details: {
-        order_id: `ORDER-${order.id}-${Date.now()}`,
-        gross_amount: order.total
-      },
-      customer_details: {
-        first_name: order.user.name,
-        email: order.user.email,
-        phone: order.phone || '08123456789',
-        billing_address: {
-          address: order.address,
-          phone: order.phone
-        }
-      },
-      item_details: order.items.map(item => ({
-        id: item.productId,
-        price: item.price,
-        quantity: item.quantity,
-        name: item.product.name.substring(0, 50)
-      })),
-      callbacks: {
-        finish: `${process.env.FRONTEND_URL}/payment/success`,
-        error: `${process.env.FRONTEND_URL}/payment/error`,
-        pending: `${process.env.FRONTEND_URL}/payment/pending`
-      }
-    };
-
-    // Create transaction
-    const transaction = await snap.createTransaction(parameter);
-    
-    // Update order dengan payment URL
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        paymentUrl: transaction.redirect_url,
-        transactionId: transaction.transaction_id,
-        paymentStatus: 'PENDING'
-      }
-    });
-
-    return {
-      orderId: order.id,
-      paymentUrl: transaction.redirect_url,
-      token: transaction.token
-    };
-  } catch (error) {
-    console.error('Payment creation error:', error);
-    throw error;
-  }
-};
-
-/**
- * Handle payment notification (webhook)
- */
-const handlePaymentNotification = async (notification) => {
-  try {
-    const transaction = await snap.transaction.notification(notification);
-    const orderId = transaction.order_id;
-    const transactionStatus = transaction.transaction_status;
-    const fraudStatus = transaction.fraud_status;
-
-    // Cari order berdasarkan transactionId atau order_id
-    let order = await prisma.order.findFirst({
-      where: {
-        OR: [
-          { transactionId: orderId },
-          { id: parseInt(orderId.split('-')[1]) }
-        ]
-      }
-    });
-
-    if (!order) throw new Error('Order tidak ditemukan');
-
-    let paymentStatus = order.paymentStatus;
-    let orderStatus = order.status;
-
-    // Update status berdasarkan Midtrans response
-    if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
-      paymentStatus = 'PAID';
-      orderStatus = 'PROCESSING';
-    } else if (transactionStatus === 'pending') {
-      paymentStatus = 'PENDING';
-    } else if (transactionStatus === 'deny' || transactionStatus === 'cancel' || transactionStatus === 'expire') {
-      paymentStatus = 'FAILED';
-      orderStatus = 'CANCELLED';
+        orderBy: { name: 'asc' }
+      });
+      return methods;
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      return [];
     }
-
-    // Update order
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        paymentStatus,
-        status: orderStatus
-      }
-    });
-
-    return { orderId: order.id, paymentStatus, orderStatus };
-  } catch (error) {
-    console.error('Payment notification error:', error);
-    throw error;
   }
-};
 
-/**
- * Check payment status
- */
-const checkPaymentStatus = async (orderId, userId) => {
-  const order = await prisma.order.findUnique({
-    where: { id: parseInt(orderId) }
-  });
+  async getBankAccounts() {
+    try {
+      const accounts = await prisma.bankAccount.findMany({
+        where: { isActive: true },
+        include: {
+          paymentMethod: {
+            select: { name: true, code: true }
+          }
+        },
+        orderBy: { bankName: 'asc' }
+      });
+      return accounts;
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+      return [];
+    }
+  }
 
-  if (!order) throw new Error('Order tidak ditemukan');
-  if (order.userId !== userId) throw new Error('Anda tidak memiliki akses');
+  async processPayment(orderId, userId, methodCode, bankAccountId) {
+    try {
+      // Cek order
+      const order = await prisma.order.findUnique({
+        where: { id: parseInt(orderId) },
+        include: { items: true }
+      });
 
-  return {
-    paymentStatus: order.paymentStatus,
-    paymentUrl: order.paymentUrl,
-    status: order.status
-  };
-};
+      if (!order) throw new Error('Pesanan tidak ditemukan');
+      if (order.userId !== userId) throw new Error('Anda tidak memiliki akses ke pesanan ini');
+      if (order.status !== 'PENDING') throw new Error('Pesanan sudah diproses');
 
-module.exports = {
-  createPayment,
-  handlePaymentNotification,
-  checkPaymentStatus
-};
+      // Cek metode pembayaran
+      const method = await prisma.paymentMethod.findUnique({
+        where: { code: methodCode }
+      });
+
+      if (!method) throw new Error('Metode pembayaran tidak ditemukan');
+
+      // Proses berdasarkan metode
+      let paymentStatus = 'PENDING';
+      let paymentData = {};
+
+      if (methodCode === 'bank_transfer') {
+        if (!bankAccountId) throw new Error('Pilih rekening tujuan');
+        
+        const bank = await prisma.bankAccount.findUnique({
+          where: { id: parseInt(bankAccountId) }
+        });
+        if (!bank) throw new Error('Rekening tidak ditemukan');
+        
+        paymentData = {
+          bankName: bank.bankName,
+          accountNumber: bank.accountNumber,
+          accountHolder: bank.accountHolder
+        };
+      } else if (methodCode === 'qris') {
+        paymentData = {
+          qrCode: `QR-${Date.now()}-${order.id}`,
+          qrString: `https://qris.example.com/${order.id}`
+        };
+      } else if (methodCode === 'cod') {
+        paymentData = {
+          codAmount: order.total,
+          codStatus: 'WAITING_DELIVERY'
+        };
+      }
+
+      // Update order
+      const updatedOrder = await prisma.order.update({
+        where: { id: parseInt(orderId) },
+        data: {
+          paymentMethod: methodCode,
+          paymentStatus: paymentStatus,
+          paymentProof: paymentData.qrCode || null
+        },
+        include: {
+          items: {
+            include: { product: { select: { name: true, imageUrl: true } } }
+          },
+          user: { select: { name: true, email: true } }
+        }
+      });
+
+      // Simpan transaksi pembayaran
+      await prisma.payment.create({
+        data: {
+          orderId: parseInt(orderId),
+          userId: userId,
+          method: methodCode,
+          amount: order.total,
+          status: paymentStatus,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 jam
+        }
+      });
+
+      return updatedOrder;
+    } catch (error) {
+      console.error('Payment process error:', error);
+      throw error;
+    }
+  }
+
+  async confirmPayment(orderId, userId, proofImage) {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { id: parseInt(orderId) }
+      });
+
+      if (!order) throw new Error('Pesanan tidak ditemukan');
+      if (order.userId !== userId) throw new Error('Anda tidak memiliki akses');
+
+      const updatedOrder = await prisma.order.update({
+        where: { id: parseInt(orderId) },
+        data: {
+          paymentStatus: 'PAID',
+          paidAt: new Date(),
+          paymentProof: proofImage,
+          status: 'PROCESSING'
+        }
+      });
+
+      return updatedOrder;
+    } catch (error) {
+      console.error('Confirm payment error:', error);
+      throw error;
+    }
+  }
+}
+
+module.exports = new PaymentService();

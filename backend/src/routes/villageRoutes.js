@@ -227,4 +227,44 @@ router.get('/disasters', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// ========== VILLAGE DATA ==========
+router.get('/user-village', async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        village: {
+          include: {
+            umkm: true,
+            products: true,
+            economy: {
+              orderBy: { year: 'desc' },
+              take: 12
+            }
+          }
+        }
+      }
+    });
+    
+    success(res, 'Data desa user', user?.village || null);
+  } catch (error) { next(error); }
+});
+
+router.get('/all', async (req, res, next) => {
+  try {
+    const villages = await prisma.village.findMany({
+      include: {
+        _count: {
+          select: { umkm: true, products: true, users: true }
+        },
+        economy: {
+          orderBy: { year: 'desc' },
+          take: 1
+        }
+      }
+    });
+    success(res, 'Daftar desa', villages);
+  } catch (error) { next(error); }
+});
+
 module.exports = router;

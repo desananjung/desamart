@@ -33,6 +33,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relasi Core
   products  Product[]
   cart      Cart?
   orders    Order[]
@@ -42,48 +43,44 @@ model User {
   payments  Payment[]
   umkm      UMKM?
   
+  // Relasi ke Village (One-to-Many - banyak user bisa di satu desa)
+  villageId Int?
+  village   Village? @relation(fields: [villageId], references: [id])
+
   // Relasi untuk komunitas
   communityPosts   UMKMCommunity[]
   communityComments UMKMComment[]
-  // TAMBAHKAN: Relasi Koperasi
-   cooperativeAdmin  CooperativeDigital?
+  
+  // Relasi Koperasi
+  cooperativeAdmin  CooperativeDigital?
   cooperativeMember CooperativeDigitalMember[]
-   // Relasi Enterprise
-  enterpriseOwner  Enterprise?           // sebagai owner
-  enterpriseMember EnterpriseMember[]    // sebagai member
+  
+  // Relasi Enterprise
+  enterpriseOwner  Enterprise?
+  enterpriseMember EnterpriseMember[]
+  
   // Relasi Pertanian
   farms       Farm[]
-  farmOrders  FarmOrder[]          // sebagai pembeli
-  
+  farmOrders  FarmOrder[]
 
-  // ============================================
   // Relasi Layanan Desa
-  // ============================================
-  
-  // Village Info
   villageInfos      VillageInfo[]
-  
-  // Complaints - dengan nama relasi
   complaints        Complaint[] @relation("UserComplaints")
   assignedComplaints Complaint[] @relation("AssignedComplaints")
   complaintResponses ComplaintResponse[]
-  
-  // Events
   eventParticipants VillageEventParticipant[]
-  
-  // Documents - dengan nama relasi
   documentRequests  VillageDocument[] @relation("DocumentRequester")
   documentOfficer   VillageDocument[] @relation("DocumentOfficer")
-  
-  // Village Potential
   villagePotentials VillagePotential[]
-  
-  // Donations
   donations         Donation[]
   donationDonors    DonationDonor[]
-  
-  // Disaster
   disasterReports   DisasterInfo[]
+  notifications Notification[]
+  // TAMBAHKAN: Relasi ke LocalReward
+  localReward LocalReward?
+  
+  // TAMBAHKAN: Relasi ke VillageLogistics sebagai courier
+  courierLogistics VillageLogistics[] @relation("courier")
 }
 
 // ============================================
@@ -148,19 +145,17 @@ model Product {
   storeId     Int?
   store       Store?   @relation(fields: [storeId], references: [id])
 
+  // Relasi ke Village (One-to-Many - banyak product bisa dari satu desa)
+  villageId   Int?
+  village     Village? @relation(fields: [villageId], references: [id])
+
   cartItems   CartItem[]
   orderItems  OrderItem[]
   wishlistItems WishlistItem[]
   reviews       Review[]
   umkmProducts  UMKMProduct[]
-  
-  // Relasi ke Promotion
-  promotions  Promotion[]
-
-  // TAMBAHKAN: Relasi Koperasi
+  promotions    Promotion[]
   cooperativeProducts CooperativeDigitalProduct[]
-
-  // TAMBAHKAN: Relasi Enterprise
   enterpriseProducts EnterpriseProduct[]
 }
 
@@ -224,8 +219,11 @@ model Order {
   payments    Payment[]
   shipping    Shipping?
 
-  // TAMBAHKAN: Relasi Enterprise
+  // Relasi Enterprise
   enterpriseOrders EnterpriseOrder[]
+  
+  // TAMBAHKAN: Relasi ke VillageLogistics
+  villageLogistics VillageLogistics?
 }
 
 // ============================================
@@ -359,9 +357,12 @@ model UMKM {
   userId      Int      @unique
   user        User     @relation(fields: [userId], references: [id])
   
-  // PERBAIKAN: storeId harus unique untuk one-to-one
   storeId     Int      @unique
   store       Store    @relation(fields: [storeId], references: [id])
+  
+  // Relasi ke Village (One-to-Many)
+  villageId   Int?
+  village     Village? @relation(fields: [villageId], references: [id])
   
   products    UMKMProduct[]
   promotions  Promotion[]
@@ -1424,6 +1425,166 @@ model FarmLogistics {
   status      String   @default("SCHEDULED")
   
   notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// ============================================
+// MODEL VILLAGE_ECONOMY (Data Ekonomi Desa)
+// ============================================
+model VillageEconomy {
+  id          Int      @id @default(autoincrement())
+  villageId   Int
+  village     Village  @relation(fields: [villageId], references: [id])
+  
+  // Data ekonomi
+  totalUMKM   Int      @default(0)
+  totalRevenue Float   @default(0)
+  totalTransactions Int @default(0)
+  
+  // Pertumbuhan
+  growthRate  Float    @default(0)
+  month       Int
+  year        Int
+  
+  // Top products
+  topProducts Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([villageId, month, year])
+}
+
+// ============================================
+// MODEL VILLAGE (Data Desa)
+// ============================================
+model Village {
+  id          Int      @id @default(autoincrement())
+  name        String
+  district    String
+  regency     String
+  province    String
+  
+  latitude    Float?
+  longitude   Float?
+  
+  population  Int?
+  area        Float?
+  
+  // Relasi - One-to-Many (satu desa bisa punya banyak UMKM, produk, user)
+  umkm        UMKM[]
+  economy     VillageEconomy[]
+  users       User[]    // ← Tambahkan ini
+  products    Product[] // ← Tambahkan ini
+  
+  // Relasi ke VillageLogistics
+  pickupLogistics  VillageLogistics[] @relation("pickup")
+  deliveryLogistics VillageLogistics[] @relation("delivery")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// ============================================
+// MODEL LOCAL_REWARD (Penghargaan Belanja Lokal)
+// ============================================
+model LocalReward {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique  // ← TAMBAHKAN @unique untuk one-to-one
+  user        User     @relation(fields: [userId], references: [id])
+  
+  totalPoints Int      @default(0)
+  level       String   @default("PEMULA")
+  
+  localPurchases Int    @default(0)
+  totalPurchases Int   @default(0)
+  localPercentage Float @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// ============================================
+// MODEL VILLAGE_LOGISTICS (Logistik Desa)
+// ============================================
+model VillageLogistics {
+  id          Int      @id @default(autoincrement())
+  orderId     Int      @unique  // ← TAMBAHKAN @unique untuk one-to-one
+  order       Order    @relation(fields: [orderId], references: [id])
+  
+  pickupVillageId Int
+  pickupVillage   Village @relation("pickup", fields: [pickupVillageId], references: [id])
+  deliveryVillageId Int
+  deliveryVillage Village @relation("delivery", fields: [deliveryVillageId], references: [id])
+  
+  courierId   Int?
+  courier     User?    @relation("courier", fields: [courierId], references: [id])
+  
+  distance    Float
+  cost        Float
+  estimatedTime String
+  
+  status      String   @default("PENDING")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// ============================================
+// MODEL NOTIFICATION (Notifikasi)
+// ============================================
+model Notification {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  
+  type        String   // NEW_ORDER, ORDER_STATUS, PROMOTION, SYSTEM
+  title       String
+  message     String
+  data        Json?    // Data tambahan { orderId, productId, etc }
+  
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([isRead])
+}
+// ============================================
+// MODEL PAYMENT_METHOD (Metode Pembayaran)
+// ============================================
+model PaymentMethod {
+  id          Int      @id @default(autoincrement())
+  name        String   // BANK_TRANSFER, QRIS, COD
+  code        String   @unique // bank_transfer, qris, cod
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true)
+  isOnline    Boolean  @default(true) // true = online, false = offline (COD)
+  fee         Float    @default(0)
+  minAmount   Float    @default(0)
+  maxAmount   Float    @default(999999999)
+  
+  // Untuk Bank Transfer
+  bankAccounts BankAccount[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL BANK_ACCOUNT (Rekening Bank)
+// ============================================
+model BankAccount {
+  id          Int      @id @default(autoincrement())
+  paymentMethodId Int
+  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  
+  bankName    String
+  accountNumber String @unique  // ← TAMBAHKAN @unique
+  accountHolder String
+  branch      String?
+  isActive    Boolean  @default(true)
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

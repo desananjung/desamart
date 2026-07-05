@@ -1,5 +1,7 @@
 const orderService = require('../services/orderService');
 const { success, created, badRequest, notFound, forbidden } = require('../utils/responseHelper');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient(); // ← TAMBAHKAN INI
 
 // ========== CREATE ORDER ==========
 exports.createOrder = async (req, res, next) => {
@@ -10,6 +12,10 @@ exports.createOrder = async (req, res, next) => {
     }
     
     const order = await orderService.createOrder(req.user.id, address, phone, note);
+    
+    // Kirim notifikasi ke seller
+    await sendOrderNotification(order);
+    
     created(res, 'Pesanan berhasil dibuat', order);
   } catch (error) {
     if (error.message === 'Keranjang belanja kosong') return badRequest(res, error.message);
@@ -90,3 +96,37 @@ exports.updateStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+// ========== SEND NOTIFICATION TO SELLER ==========
+async function sendOrderNotification(order) {
+  try {
+    // Ambil seller dari product
+    const sellerIds = [];
+    for (const item of order.items) {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        select: { sellerId: true }
+      });
+      if (product && !sellerIds.includes(product.sellerId)) {
+        sellerIds.push(product.sellerId);
+      }
+    }
+
+    for (const sellerId of sellerIds) {
+      // Simpan notifikasi ke database
+      await prisma.notification.create({
+        data: {
+          userId: sellerId,
+          type: 'NEW_ORDER',
+          title: '📦 Pesanan Baru!',
+          message: `Ada pesanan baru #${order.id} dari ${order.user?.name || 'Pembeli'}`,
+          data: { orderId: order.id },
+          isRead: false
+        }
+      });
+      console.log(`✅ Notification sent to seller ${sellerId}`);
+    }
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  }
+}

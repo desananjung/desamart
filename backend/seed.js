@@ -73,6 +73,9 @@ async function main() {
       console.log(`✅ Category created: ${category.name}`);
     }
 
+    await seedPayments();
+    console.log('✅ Payment methods and bank accounts seeded');
+
     console.log('\n🎉 Seeding completed successfully!');
     console.log('\n📋 Akun Demo:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -94,6 +97,47 @@ async function main() {
     process.exit(1);
   } finally {
     await prisma.$disconnect();
+  }
+}
+// Seed Payment Methods & Bank Accounts
+async function seedPayments() {
+  // Payment Methods
+  const methods = [
+    { name: 'BANK_TRANSFER', code: 'bank_transfer', description: 'Transfer Bank', isOnline: true, fee: 0 },
+    { name: 'QRIS', code: 'qris', description: 'QR Code Payment', isOnline: true, fee: 0 },
+    { name: 'COD', code: 'cod', description: 'Cash on Delivery', isOnline: false, fee: 5000 }
+  ];
+
+  for (const method of methods) {
+    await prisma.paymentMethod.upsert({
+      where: { code: method.code },
+      update: method,
+      create: method
+    });
+  }
+
+  // Bank Accounts
+  const bankData = [
+    { bankName: 'BCA', accountNumber: '1234567890', accountHolder: 'DesaMart Official' },
+    { bankName: 'Mandiri', accountNumber: '0987654321', accountHolder: 'DesaMart Official' },
+    { bankName: 'BNI', accountNumber: '5678901234', accountHolder: 'DesaMart Official' },
+    { bankName: 'BRI', accountNumber: '4321098765', accountHolder: 'DesaMart Official' }
+  ];
+
+  const paymentMethod = await prisma.paymentMethod.findUnique({
+    where: { code: 'bank_transfer' }
+  });
+
+  if (paymentMethod) {
+    for (const bank of bankData) {
+      await prisma.bankAccount.upsert({
+        where: { 
+          accountNumber: bank.accountNumber 
+        },
+        update: { ...bank, paymentMethodId: paymentMethod.id },
+        create: { ...bank, paymentMethodId: paymentMethod.id }
+      });
+    }
   }
 }
 

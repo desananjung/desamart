@@ -81,6 +81,29 @@ model User {
   
   // TAMBAHKAN: Relasi ke VillageLogistics sebagai courier
   courierLogistics VillageLogistics[] @relation("courier")
+
+
+// Ebook
+  villageEbooks    VillageEbook[]        // sebagai uploader
+  
+  // PPOB
+  ppobPayments     PPOB[]               // sebagai payer
+  
+  // Courier
+  courierOrders    VillageCourierOrder[] @relation("sender")   // sebagai sender
+  courierReceived  VillageCourierOrder[] @relation("receiver") // sebagai receiver
+  
+  // Job
+  jobsPosted       VillageJob[]         // sebagai poster
+  jobApplications  VillageJobApplication[] // sebagai applicant
+  
+  // Live Shopping
+  liveShows        VillageLiveShopping[] // sebagai host
+  // ============================================
+  // TAMBAHKAN: Relasi Desa Admin Products
+  // ============================================
+  desaAdminProducts   DesaAdminProduct[]   // sebagai uploader
+  desaAdminOrders     DesaAdminOrder[]     // sebagai buyer
 }
 
 // ============================================
@@ -157,8 +180,11 @@ model Product {
   promotions    Promotion[]
   cooperativeProducts CooperativeDigitalProduct[]
   enterpriseProducts EnterpriseProduct[]
-}
 
+
+// TAMBAHKAN: Relasi Live Shopping
+  liveProducts VillageLiveProduct[]
+}
 // ============================================
 // MODEL CART
 // ============================================
@@ -1585,6 +1611,241 @@ model BankAccount {
   accountHolder String
   branch      String?
   isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// ============================================
+// MODEL VILLAGE_EBOOK (Ebook Desa)
+// ============================================
+model VillageEbook {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  author      String
+  price       Float    @default(0)
+  fileUrl     String   // URL file ebook
+  coverUrl    String?
+  category    String   // PANDUAN, RESEP, KERAJINAN, PERTANIAN
+  downloads   Int      @default(0)
+  isActive    Boolean  @default(true)
+  
+  uploadedBy  Int
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL PPOB (Payment Point Online Bank)
+// ============================================
+model PPOB {
+  id          Int      @id @default(autoincrement())
+  type        String   // LISTRIK, AIR, TELPON, INTERNET, BPJS, PBB
+  provider    String   // PLN, PDAM, TELKOM, dll
+  customerId  String
+  customerName String
+  amount      Float
+  adminFee    Float    @default(0)
+  status      String   @default("PENDING") // PENDING, PAID, FAILED
+  
+  paidBy      Int
+  payer       User     @relation(fields: [paidBy], references: [id])
+  paidAt      DateTime?
+  
+  invoiceNumber String  @unique
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL VILLAGE_COURIER (Kurir Desa)
+// ============================================
+model VillageCourier {
+  id          Int      @id @default(autoincrement())
+  name        String
+  phone       String
+  vehicleType String   // ← Ganti vehicle → vehicleType
+  village     String   // ← Ganti area → village
+  pricePerKm  Float    // ← Ganti fee → pricePerKm
+  isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)  // ← Tambahkan
+  available   Boolean  @default(true)   // ← Tambahkan
+  rating      Float    @default(0)
+  totalDeliveries Int  @default(0)      // ← Tambahkan
+  
+  orders      VillageCourierOrder[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("village_couriers")
+}
+
+// ============================================
+// MODEL VILLAGE_COURIER_ORDER (Pesanan Kurir)
+// ============================================
+model VillageCourierOrder {
+  id          Int      @id @default(autoincrement())
+  courierId   Int
+  courier     VillageCourier @relation(fields: [courierId], references: [id])
+  
+  senderId    Int
+  sender      User     @relation("sender", fields: [senderId], references: [id])
+  receiverId  Int
+  receiver    User     @relation("receiver", fields: [receiverId], references: [id])
+  
+  pickupAddress String
+  deliveryAddress String
+  description String?
+  weight      Float
+  fee         Float
+  status      String   @default("PENDING") // PENDING, PICKED, IN_TRANSIT, DELIVERED
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL VILLAGE_JOB (Lowongan Kerja)
+// ============================================
+model VillageJob {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  company     String
+  location    String
+  type        String   // FULLTIME, PARTTIME, FREELANCE, MAGANG
+  salary      String?
+  requirements String?
+  contact     String
+  
+  postedBy    Int
+  poster      User     @relation(fields: [postedBy], references: [id])
+  
+  isActive    Boolean  @default(true)
+  deadline    DateTime?
+  
+  applications VillageJobApplication[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL VILLAGE_JOB_APPLICATION (Lamaran Kerja)
+// ============================================
+model VillageJobApplication {
+  id          Int      @id @default(autoincrement())
+  jobId       Int
+  job         VillageJob @relation(fields: [jobId], references: [id])
+  applicantId Int
+  applicant   User     @relation(fields: [applicantId], references: [id])
+  
+  message     String?
+  cvUrl       String?
+  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL VILLAGE_LIVE_SHOPPING (Live Shopping)
+// ============================================
+model VillageLiveShopping {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  streamUrl   String
+  thumbnail   String?
+  
+  hostId      Int
+  host        User     @relation(fields: [hostId], references: [id])
+  
+  startTime   DateTime
+  endTime     DateTime
+  isActive    Boolean  @default(true)
+  
+  products    VillageLiveProduct[]
+  viewers     Int      @default(0)
+  likes       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL VILLAGE_LIVE_PRODUCT (Produk Live Shopping)
+// ============================================
+model VillageLiveProduct {
+  id          Int      @id @default(autoincrement())
+  liveId      Int
+  live        VillageLiveShopping @relation(fields: [liveId], references: [id])
+  productId   Int
+  product     Product  @relation(fields: [productId], references: [id])
+  
+  price       Float
+  stock       Int      @default(0)
+  discount    Float    @default(0)
+  
+  sold        Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// ============================================
+// MODEL DESA_ADMIN_PRODUCT (Produk Administrasi Desa)
+// ============================================
+model DesaAdminProduct {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  type        String   // TEMPLATE_SURAT, FORMAT_APBDES, EBOOK_ADMIN, JASA_DOKUMEN, KURSUS_ONLINE
+  price       Float    @default(0)
+  
+  fileUrl     String?
+  imageUrl    String?
+  category    String
+  sample      String?
+  
+  duration    String?
+  level       String?
+  
+  serviceTime String?
+  includes    String?
+  
+  isActive    Boolean  @default(true)
+  sold        Int      @default(0)
+  rating      Float    @default(0)
+  
+  uploadedBy  Int
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+  
+  // TAMBAHKAN: Relasi ke Order
+  orders      DesaAdminOrder[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// MODEL DESA_ADMIN_ORDER (Pesanan Administrasi Desa)
+// ============================================
+model DesaAdminOrder {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  product     DesaAdminProduct @relation(fields: [productId], references: [id])
+  buyerId     Int
+  buyer       User     @relation(fields: [buyerId], references: [id])
+  
+  amount      Float
+  status      String   @default("PENDING")
+  
+  notes       String?
+  deadline    DateTime?
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

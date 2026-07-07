@@ -39,6 +39,29 @@ import AgricultureFarmNew from './pages/AgricultureFarmNew';
 import AgriculturePrices from './pages/AgriculturePrices';
 import AgricultureSeasons from './pages/AgricultureSeasons';
 import KoperasiRegister from './pages/KoperasiRegister';
+import VillageInfo from './pages/VillageInfo';
+import VillageComplaints from './pages/VillageComplaints';
+import VillageEvents from './pages/VillageEvents';
+import VillageDonations from './pages/VillageDonations';
+import VillageDocuments from './pages/VillageDocuments';
+import VillageCouriers from './pages/VillageCouriers';
+import VillageLive from './pages/VillageLive';
+import VillageEbooks from './pages/VillageEbooks';
+import VillageAdminProducts from './pages/VillageAdminProducts';
+import VillageEgov from './pages/VillageEgov';
+import About from './pages/About';
+import Careers from './pages/Careers';
+import Press from './pages/Press';
+import Blog from './pages/Blog';
+import Help from './pages/Help';
+import FAQ from './pages/FAQ';
+import Contact from './pages/Contact';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Returns from './pages/Returns';
+import OrderTracking from './pages/OrderTracking';
+
+
 
 // Feature data
 const features = [
@@ -283,6 +306,16 @@ function App() {
             <Route path="/products" element={<ProductList />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/careers" element={<Careers />} />
+            <Route path="/press" element={<Press />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<Privacy />} />
+             <Route path="/terms" element={<Terms />} />
+             <Route path="/returns" element={<Returns />} />
 
             {/* ============================================ */}
             {/* PROTECTED ROUTES - WAJIB LOGIN */}
@@ -294,6 +327,8 @@ function App() {
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
             <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+            <Route path="/tracking/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
+
             
             {/* UMKM Routes */}
             <Route path="/umkm" element={<ProtectedRoute><UMKM /></ProtectedRoute>} />
@@ -311,7 +346,57 @@ function App() {
             {/* Layanan Desa */}
             <Route path="/layanan-desa" element={<ProtectedRoute><LayananDesa /></ProtectedRoute>} />
             <Route path="/village/map" element={<ProtectedRoute><VillageMap /></ProtectedRoute>} />
-            
+            <Route path="/village/info" element={
+  <ProtectedRoute>
+    <VillageInfo />
+  </ProtectedRoute>
+} />
+<Route path="/village/complaints" element={
+  <ProtectedRoute>
+    <VillageComplaints />
+  </ProtectedRoute>
+} />
+<Route path="/village/events" element={
+  <ProtectedRoute>
+    <VillageEvents />
+  </ProtectedRoute>
+} />
+<Route path="/village/donations" element={
+  <ProtectedRoute>
+    <VillageDonations />
+  </ProtectedRoute>
+} />
+<Route path="/village/documents" element={
+  <ProtectedRoute>
+    <VillageDocuments />
+  </ProtectedRoute>
+} />
+<Route path="/village/couriers" element={
+  <ProtectedRoute>
+    <VillageCouriers />
+  </ProtectedRoute>
+} />
+<Route path="/village/live" element={
+  <ProtectedRoute>
+    <VillageLive />
+  </ProtectedRoute>
+} />
+<Route path="/village/ebooks" element={
+  <ProtectedRoute>
+    <VillageEbooks />
+  </ProtectedRoute>
+} />
+<Route path="/village/admin-products" element={
+  <ProtectedRoute>
+    <VillageAdminProducts />
+  </ProtectedRoute>
+} />
+<Route path="/village/egov" element={
+  <ProtectedRoute>
+    <VillageEgov />
+  </ProtectedRoute>
+} />
+
             {/* Enterprise */}
             <Route path="/enterprise" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
             <Route path="/enterprise/products" element={

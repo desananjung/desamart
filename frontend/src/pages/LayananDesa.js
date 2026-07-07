@@ -1,36 +1,168 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { NewspaperIcon, ChatBubbleLeftRightIcon, CalendarIcon, HeartIcon } from '@heroicons/react/24/outline';
+import {
+  NewspaperIcon,
+  ChatBubbleLeftRightIcon,
+  CalendarIcon,
+  HeartIcon,
+  DocumentIcon,
+  ExclamationTriangleIcon,
+  BookOpenIcon,
+  CreditCardIcon,
+  TruckIcon,
+  BriefcaseIcon,
+  VideoCameraIcon,
+  ClipboardDocumentIcon,  // ← Gunakan ClipboardDocumentIcon
+  HomeIcon
+} from '@heroicons/react/24/outline';
 
 const LayananDesa = () => {
-  const [infos, setInfos] = useState([]);
-  const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    ebooks: 0,
+    ppob: 0,
+    couriers: 0,
+    jobs: 0,
+    live: 0
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
-        const [infoRes, complaintRes] = await Promise.all([
-          api.get('/village/info?limit=3'),
-          api.get('/village/complaints?limit=3')
+        const [ebooks, jobs, couriers] = await Promise.all([
+          api.get('/village-services/ebooks?limit=1'),
+          api.get('/village-services/jobs?limit=1'),
+          api.get('/village-services/couriers?limit=1')
         ]);
-        setInfos(infoRes.data.data || []);
-        setComplaints(complaintRes.data.data || []);
+        setStats({
+          ebooks: ebooks.data.data?.length || 0,
+          jobs: jobs.data.data?.length || 0,
+          couriers: couriers.data.data?.length || 0,
+          ppob: 0,
+          live: 0
+        });
       } catch (error) {
-        console.error('Error fetching village data:', error);
+        console.error('Error fetching stats:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchStats();
   }, []);
 
-  const cards = [
-    { icon: NewspaperIcon, label: 'Informasi Desa', count: infos.length, path: '/village/info', color: 'text-blue-500', bg: 'bg-blue-50' },
-    { icon: ChatBubbleLeftRightIcon, label: 'Pengaduan', count: complaints.length, path: '/village/complaints', color: 'text-red-500', bg: 'bg-red-50' },
-    { icon: CalendarIcon, label: 'Kegiatan', count: 0, path: '/village/events', color: 'text-green-500', bg: 'bg-green-50' },
-    { icon: HeartIcon, label: 'Donasi', count: 0, path: '/village/donations', color: 'text-pink-500', bg: 'bg-pink-50' }
+  const services = [
+    { 
+      icon: NewspaperIcon, 
+      label: 'Informasi Desa', 
+      path: '/village/info', 
+      color: 'text-blue-500', 
+      bg: 'bg-blue-50',
+      desc: 'Berita & pengumuman'
+    },
+    { 
+      icon: ChatBubbleLeftRightIcon, 
+      label: 'Pengaduan', 
+      path: '/village/complaints', 
+      color: 'text-red-500', 
+      bg: 'bg-red-50',
+      desc: 'Laporan warga'
+    },
+    { 
+      icon: CalendarIcon, 
+      label: 'Kegiatan', 
+      path: '/village/events', 
+      color: 'text-green-500', 
+      bg: 'bg-green-50',
+      desc: 'Jadwal kegiatan'
+    },
+    { 
+      icon: HeartIcon, 
+      label: 'Donasi', 
+      path: '/village/donations', 
+      color: 'text-pink-500', 
+      bg: 'bg-pink-50',
+      desc: 'Bantuan sosial'
+    },
+    { 
+      icon: DocumentIcon, 
+      label: 'Administrasi', 
+      path: '/village/documents', 
+      color: 'text-purple-500', 
+      bg: 'bg-purple-50',
+      desc: 'Surat & dokumen'
+    },
+    { 
+      icon: ExclamationTriangleIcon, 
+      label: 'Info Bencana', 
+      path: '/village/disasters', 
+      color: 'text-orange-500', 
+      bg: 'bg-orange-50',
+      desc: 'Peringatan bencana'
+    },
+    // ========== LAYANAN BARU ==========
+    { 
+      icon: BookOpenIcon, 
+      label: 'Ebook Desa', 
+      path: '/village/ebooks', 
+      color: 'text-indigo-500', 
+      bg: 'bg-indigo-50',
+      desc: 'Panduan & resep',
+      count: stats.ebooks
+    },
+    { 
+      icon: CreditCardIcon, 
+      label: 'PPOB', 
+      path: '/village/ppob', 
+      color: 'text-emerald-500', 
+      bg: 'bg-emerald-50',
+      desc: 'Bayar tagihan',
+      count: stats.ppob
+    },
+    { 
+      icon: TruckIcon, 
+      label: 'Kurir Desa', 
+      path: '/village/couriers', 
+      color: 'text-amber-500', 
+      bg: 'bg-amber-50',
+      desc: 'Antar-jemput',
+      count: stats.couriers
+    },
+    { 
+      icon: BriefcaseIcon, 
+      label: 'Lowongan Kerja', 
+      path: '/village/jobs', 
+      color: 'text-cyan-500', 
+      bg: 'bg-cyan-50',
+      desc: 'Info kerja',
+      count: stats.jobs
+    },
+    { 
+      icon: VideoCameraIcon, 
+      label: 'Live Shopping', 
+      path: '/village/live', 
+      color: 'text-rose-500', 
+      bg: 'bg-rose-50',
+      desc: 'Belanja live',
+      count: stats.live
+    },
+    // ========== ADMINISTRASI DESA (BARU) ==========
+    { 
+      icon: ClipboardDocumentIcon, 
+      label: 'Administrasi Desa', 
+      path: '/village/admin-products', 
+      color: 'text-purple-500', 
+      bg: 'bg-purple-50',
+      desc: 'Template & jasa'
+    },
+    { 
+      icon: HomeIcon, 
+      label: 'E-Government', 
+      path: '/village/egov', 
+      color: 'text-teal-500', 
+      bg: 'bg-teal-50',
+      desc: 'Layanan pemerintah'
+    }
   ];
 
   if (loading) {
@@ -43,54 +175,45 @@ const LayananDesa = () => {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">🏘️ Layanan Desa</h1>
-        <p className="text-gray-500">Informasi dan layanan untuk masyarakat desa</p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">🏘️ Layanan Desa</h1>
+        <p className="text-gray-500 mt-1">Lengkap! Semua layanan untuk masyarakat desa</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {cards.map((card) => (
-          <Link key={card.label} to={card.path} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-lg transition text-center">
-            <div className={`w-12 h-12 ${card.bg} rounded-xl flex items-center justify-center mx-auto`}>
-              <card.icon className={`w-6 h-6 ${card.color}`} />
+      {/* Services Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {services.map((service) => (
+          <Link
+            key={service.label}
+            to={service.path}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-lg transition group hover:-translate-y-1"
+          >
+            <div className={`w-12 h-12 ${service.bg} rounded-xl flex items-center justify-center group-hover:scale-110 transition`}>
+              <service.icon className={`w-6 h-6 ${service.color}`} />
             </div>
-            <p className="text-2xl font-bold mt-2">{card.count}</p>
-            <p className="text-sm text-gray-500">{card.label}</p>
+            <p className="text-sm font-semibold text-gray-800 mt-2">{service.label}</p>
+            <p className="text-xs text-gray-400">{service.desc}</p>
+            {service.count !== undefined && (
+              <span className="inline-block mt-1 text-xs bg-gray-100 px-2 py-0.5 rounded-full">
+                {service.count}
+              </span>
+            )}
           </Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 font-bold">📰 Informasi Terbaru</div>
-          <div className="divide-y divide-gray-100">
-            {infos.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">Belum ada informasi</div>
-            ) : (
-              infos.map(info => (
-                <div key={info.id} className="px-6 py-4 hover:bg-gray-50 transition">
-                  <p className="font-medium">{info.title}</p>
-                  <p className="text-sm text-gray-500">{new Date(info.createdAt).toLocaleDateString('id-ID')}</p>
-                </div>
-              ))
-            )}
+      {/* Promo Banner */}
+      <div className="mt-8 bg-gradient-to-r from-primary to-red-500 rounded-2xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold">🎉 Layanan Lengkap!</h3>
+            <p className="text-white/80 text-sm mt-1">
+              Ebook, PPOB, Kurir, Lowongan, Live Shopping, & Administrasi Desa
+            </p>
           </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 font-bold">📢 Pengaduan Terbaru</div>
-          <div className="divide-y divide-gray-100">
-            {complaints.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">Belum ada pengaduan</div>
-            ) : (
-              complaints.map(complaint => (
-                <div key={complaint.id} className="px-6 py-4 hover:bg-gray-50 transition">
-                  <p className="font-medium">{complaint.title}</p>
-                  <p className="text-sm text-gray-500">Status: {complaint.status}</p>
-                </div>
-              ))
-            )}
-          </div>
+          <span className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg text-sm font-medium">
+            ✨ 13 Layanan
+          </span>
         </div>
       </div>
     </div>

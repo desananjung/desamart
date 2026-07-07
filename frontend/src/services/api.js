@@ -1,10 +1,23 @@
+// frontend/src/services/api.js
 import axios from 'axios';
+import toast from 'react-hot-toast';
+
+// ============================================
+// ✅ UPDATE DENGAN URL NGROK BARU
+// ============================================
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://73e9-182-10-130-155.ngrok-free.app/api';
+
+console.log('🔧 API_URL:', API_URL);
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+  baseURL: API_URL,
+  timeout: 30000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true' // Skip ngrok warning
+  },
+  withCredentials: false
 });
 
 // Request interceptor
@@ -14,23 +27,50 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    console.log('📤 Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.baseURL + config.url,
+    });
+    
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('❌ Request Error:', error);
+    return Promise.reject(error);
+  }
 );
 
-// Response interceptor - Handle 401 dengan hati-hati
+// Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('📥 Response:', {
+      status: response.status,
+      url: response.config.url,
+    });
+    return response;
+  },
   (error) => {
-    // Jangan redirect jika endpoint notifikasi
-    const isNotificationEndpoint = error.config?.url?.includes('/notifications');
+    console.error('❌ Response Error:', error);
     
-    if (error.response?.status === 401 && !isNotificationEndpoint) {
-      console.log('🔒 Unauthorized - redirecting to login');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    if (error.code === 'ERR_NETWORK') {
+      toast.error('Tidak dapat terhubung ke server. Pastikan backend berjalan.');
+    }
+    
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      if (status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
+      
+      if (status === 404) {
+        toast.error(data?.message || 'Endpoint tidak ditemukan');
+      }
     }
     
     return Promise.reject(error);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { PlusIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { PlusIcon } from '@heroicons/react/24/outline';
 
 const VillageComplaints = () => {
   const [complaints, setComplaints] = useState([]);
@@ -69,14 +70,13 @@ const VillageComplaints = () => {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="btn-primary flex items-center space-x-2"
+          className="btn-primary flex items-center gap-2"
         >
           <PlusIcon className="w-5 h-5" />
-          <span>Buat Pengaduan</span>
+          Buat Pengaduan
         </button>
       </div>
 
-      {/* Form Pengaduan */}
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
           <h3 className="font-bold mb-4">Form Pengaduan</h3>
@@ -117,12 +117,12 @@ const VillageComplaints = () => {
             />
             <input
               type="url"
-              placeholder="URL Gambar (opsional)"
+              placeholder="URL Gambar"
               value={form.imageUrl}
               onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
               className="input-field"
             />
-            <div className="flex space-x-2">
+            <div className="flex gap-2">
               <button type="submit" className="btn-primary">Kirim</button>
               <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Batal</button>
             </div>
@@ -130,7 +130,6 @@ const VillageComplaints = () => {
         </div>
       )}
 
-      {/* List Pengaduan */}
       <div className="space-y-4">
         {complaints.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -141,7 +140,7 @@ const VillageComplaints = () => {
             <div key={complaint.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(complaint.status)}`}>
                       {complaint.status}
                     </span>

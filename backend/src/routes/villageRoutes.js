@@ -96,21 +96,28 @@ router.get('/complaints', async (req, res, next) => {
 });
 
 // ========== KEGIATAN DESA ==========
-router.get('/events', async (req, res, next) => {
+router.post('/events', authorize('ADMIN'), async (req, res, next) => {
   try {
-    const { category, limit = 10 } = req.query;
-    const where = {};
-    if (category) where.category = category;
+    const { title, description, location, startDate, endDate, category, imageUrl, organizer, contact } = req.body;
+    if (!title || !location || !startDate || !endDate) {
+      return badRequest(res, 'Judul, lokasi, dan tanggal wajib diisi');
+    }
     
-    const events = await prisma.villageEvent.findMany({
-      where: { ...where, isPublished: true },
-      include: {
-        participants: true
-      },
-      orderBy: { startDate: 'asc' },
-      take: parseInt(limit)
+    const event = await prisma.villageEvent.create({
+      data: {
+        title,
+        description,
+        location,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        category: category || 'KEGIATAN',
+        imageUrl,
+        organizer: organizer || '',
+        contact: contact || '',
+        isPublished: true
+      }
     });
-    success(res, 'Kegiatan desa', events);
+    created(res, 'Kegiatan berhasil ditambahkan', event);
   } catch (error) { next(error); }
 });
 

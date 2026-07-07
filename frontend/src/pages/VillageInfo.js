@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon } from '@heroicons/react/24/outline';
 
 const VillageInfo = () => {
+  const { user } = useAuth();
   const [infos, setInfos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -37,7 +39,6 @@ const VillageInfo = () => {
       alert('✅ Informasi berhasil ditambahkan!');
       setShowForm(false);
       setForm({ title: '', content: '', category: 'BERITA', imageUrl: '', isPinned: false, isUrgent: false });
-      // Refresh
       const res = await api.get('/village/info');
       setInfos(res.data.data || []);
     } catch (error) {
@@ -60,17 +61,19 @@ const VillageInfo = () => {
           <h1 className="text-2xl font-bold">📰 Informasi Desa</h1>
           <p className="text-gray-500">Berita dan pengumuman terbaru</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <PlusIcon className="w-5 h-5" />
-          <span>Tambah Info</span>
-        </button>
+        {user?.role === 'ADMIN' && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <PlusIcon className="w-5 h-5" />
+            Tambah Info
+          </button>
+        )}
       </div>
 
-      {/* Form Tambah Info */}
-      {showForm && (
+      {/* Form Tambah Info - Hanya Admin */}
+      {showForm && user?.role === 'ADMIN' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
           <h3 className="font-bold mb-4">Tambah Informasi Baru</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -106,8 +109,8 @@ const VillageInfo = () => {
               onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
               className="input-field"
             />
-            <div className="flex space-x-4">
-              <label className="flex items-center space-x-2">
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={form.isPinned}
@@ -115,7 +118,7 @@ const VillageInfo = () => {
                 />
                 <span>Pin</span>
               </label>
-              <label className="flex items-center space-x-2">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={form.isUrgent}
@@ -124,7 +127,7 @@ const VillageInfo = () => {
                 <span>Urgent</span>
               </label>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex gap-2">
               <button type="submit" className="btn-primary">Simpan</button>
               <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Batal</button>
             </div>
@@ -147,7 +150,7 @@ const VillageInfo = () => {
             }`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
                     {info.isUrgent && (
                       <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">URGENT</span>
                     )}

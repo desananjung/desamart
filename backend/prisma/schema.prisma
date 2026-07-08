@@ -44,7 +44,7 @@ model User {
   documentRequests   VillageDocument[]          @relation("DocumentRequester")
   eventParticipants  VillageEventParticipant[]
   villageInfos       VillageInfo[]
-  courierLogistics   VillageLogistics[]         @relation("courier")
+  // courierLogistics   VillageLogistics[]         @relation("courier")
   villagePotentials  VillagePotential[]
   wishlist           WishlistItem[]
 }
@@ -132,11 +132,12 @@ model OrderItem {
   id        Int      @id @default(autoincrement())
   quantity  Int
   price     Float
-  orderId   Int
-  productId Int
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt  // ← TAMBAHKAN @updatedAt
+
+  orderId   Int
   order     Order    @relation(fields: [orderId], references: [id])
+  productId Int
   product   Product  @relation(fields: [productId], references: [id])
 }
 
@@ -932,8 +933,8 @@ model Village {
   umkm              UMKM[]
   users             User[]
   economy           VillageEconomy[]
-  deliveryLogistics VillageLogistics[] @relation("delivery")
-  pickupLogistics   VillageLogistics[] @relation("pickup")
+  // deliveryLogistics VillageLogistics[] @relation("delivery")
+  // pickupLogistics   VillageLogistics[] @relation("pickup")
 }
 
 model LocalReward {
@@ -949,23 +950,23 @@ model LocalReward {
   user            User     @relation(fields: [userId], references: [id])
 }
 
-model VillageLogistics {
-  id                Int      @id @default(autoincrement())
-  orderId           Int      @unique
-  pickupVillageId   Int
-  deliveryVillageId Int
-  courierId         Int?
-  distance          Float
-  cost              Float
-  estimatedTime     String
-  status            String   @default("PENDING")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  courier           User?    @relation("courier", fields: [courierId], references: [id])
-  deliveryVillage   Village  @relation("delivery", fields: [deliveryVillageId], references: [id])
-  order             Order    @relation(fields: [orderId], references: [id])
-  pickupVillage     Village  @relation("pickup", fields: [pickupVillageId], references: [id])
-}
+// model VillageLogistics {
+  // id                Int      @id @default(autoincrement())
+  // orderId           Int      @unique
+  // pickupVillageId   Int
+  // deliveryVillageId Int
+  // courierId         Int?
+  // distance          Float
+  // cost              Float
+  // estimatedTime     String
+  // status            String   @default("PENDING")
+  // createdAt         DateTime @default(now())
+  // updatedAt         DateTime @updatedAt
+  // courier           User?    @relation("courier", fields: [courierId], references: [id])
+  // deliveryVillage   Village  @relation("delivery", fields: [deliveryVillageId], references: [id])
+  // order             Order    @relation(fields: [orderId], references: [id])
+  // pickupVillage     Village  @relation("pickup", fields: [pickupVillageId], references: [id])
+// }
 
 model Notification {
   id        Int       @id @default(autoincrement())
@@ -1013,39 +1014,39 @@ model BankAccount {
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
 }
 
-model OrderStatusHistory {
-  id          Int         @id @default(autoincrement())
-  orderId     Int
-  status      OrderStatus
-  description String
-  note        String?
-  actorId     Int
-  actorRole   String
-  location    String?
-  metadata    Json?
-  createdAt   DateTime    @default(now())
+// model OrderStatusHistory {
+  // id          Int         @id @default(autoincrement())
+  // orderId     Int
+  // status      OrderStatus
+  // description String
+  // note        String?
+  // actorId     Int
+  // actorRole   String
+  // location    String?
+  // metadata    Json?
+  // createdAt   DateTime    @default(now())
 
-  @@map("order_status_histories")
-}
+  // @@map("order_status_histories")
+// }
 
-model Escrow {
-  id            Int          @id @default(autoincrement())
-  orderId       Int          @unique
-  sellerId      Int
-  amount        Float
-  fee           Float        @default(0.02)
-  netAmount     Float
-  status        EscrowStatus @default(HELD)
-  heldAt        DateTime     @default(now())
-  releasedAt    DateTime?
-  cancelledAt   DateTime?
-  transferProof String?
-  transferNote  String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+// model Escrow {
+  // id            Int          @id @default(autoincrement())
+  // orderId       Int          @unique
+  // sellerId      Int
+  // amount        Float
+  // fee           Float        @default(0.02)
+  // netAmount     Float
+  // status        EscrowStatus @default(HELD)
+  // heldAt        DateTime     @default(now())
+  // releasedAt    DateTime?
+  // cancelledAt   DateTime?
+  // transferProof String?
+  // transferNote  String?
+  // createdAt     DateTime     @default(now())
+  // updatedAt     DateTime     @updatedAt
 
-  @@map("escrows")
-}
+  // @@map("escrows")
+// }
 
 model Order {
   id               Int               @id @default(autoincrement())
@@ -1055,24 +1056,30 @@ model Order {
   address          String
   phone            String
   createdAt        DateTime          @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime          @updatedAt  // ← TAMBAHKAN @updatedAt
   note             String?
   deliveredAt      DateTime?
   paidAt           DateTime?
   paymentMethod    String?
   paymentProof     String?
-  paymentStatus    String?
+  paymentStatus    String?           @default("UNPAID")
   shippingCost     Float?
   shippingMethod   String?
   shippingNumber   String?
   trackingStatus   String?
+  orderNumber      String?           @unique
+  
   enterpriseOrders EnterpriseOrder[]
   User             User              @relation(fields: [userId], references: [id])
   items            OrderItem[]
   payments         Payment[]
   reviews          Review[]
   shipping         Shipping?
-  villageLogistics VillageLogistics?
+  // history          OrderStatusHistory[]
+  // escrow           Escrow?
+  // villageLogistics VillageLogistics?
+  delivery         Delivery?         // ← Relasi ke Delivery
+   @@map("orders")
 }
 
 enum Role {
@@ -1183,7 +1190,7 @@ enum HarvestStatus {
   SELESAI
 }
 
-/// ============================================
+// ============================================
 enum EscrowStatus {
   HELD
   RELEASED
@@ -1203,4 +1210,70 @@ enum OrderStatus {
   PICKED_UP
   IN_TRANSIT
   REFUNDED
+}
+model VillageCourier {
+  id          Int      @id @default(autoincrement())
+  name        String
+  phone       String
+  vehicleType String
+  village     String
+  pricePerKm  Float
+  isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
+  available   Boolean  @default(true)
+  rating      Float    @default(0)
+  totalDeliveries Int  @default(0)
+  deliveries  Delivery[]  // ← Relasi ke Delivery
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("village_couriers")
+}
+// ============================================
+// MODEL VILLAGE_COURIER_ORDER
+// ============================================
+// model VillageCourierOrder {
+  // id          Int      @id @default(autoincrement())
+  // courierId   Int
+  // courier     VillageCourier @relation(fields: [courierId], references: [id])
+  
+  // senderId    Int
+  // sender      User     @relation("sender", fields: [senderId], references: [id])
+  // receiverId  Int
+  // receiver    User     @relation("receiver", fields: [receiverId], references: [id])
+  
+  // pickupAddress String
+  // deliveryAddress String
+  // description String?
+  // weight      Float
+  // fee         Float
+  // status      String   @default("PENDING") // PENDING, PICKED, IN_TRANSIT, DELIVERED
+  
+  // createdAt   DateTime @default(now())
+  // updatedAt   DateTime @updatedAt
+
+ // @@map("village_courier_orders")
+// }
+model Delivery {
+  id            String   @id @default(uuid())
+  orderId       Int      @unique
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courierId     Int
+  courier       VillageCourier @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  status        String   @default("PENDING")
+  pickupAddress String
+  deliveryAddress String
+  distance      Float?
+  cost          Float
+  weight        Float?
+  estimatedTime String?
+  pickupTime    DateTime?
+  deliveredAt   DateTime?
+  tracking      String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("deliveries")
 }

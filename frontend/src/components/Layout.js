@@ -8,7 +8,8 @@ import {
   ChevronDownIcon,
   HeartIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  BellIcon  // ← TAMBAHKAN INI
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import AIChatbot from './AIChatbot';
@@ -193,6 +194,12 @@ const Layout = ({ children }) => {
                         <span>Dashboard</span>
                       </Link>
 
+                      {/* ✅ TAMBAHKAN NOTIFIKASI DI DROPDOWN */}
+                      <Link to="/notifications" className="block px-4 py-2.5 hover:bg-gray-50 transition flex items-center space-x-3">
+                        <BellIcon className="w-5 h-5 text-gray-500" />
+                        <span>Notifikasi</span>
+                      </Link>
+
                       {(user.role === 'SELLER' || user.role === 'ADMIN') && (
                         <>
                           <Link to="/umkm" className="block px-4 py-2.5 hover:bg-gray-50 transition flex items-center space-x-3">
@@ -256,11 +263,17 @@ const Layout = ({ children }) => {
             {isMobileMenuOpen && (
               <div className="md:hidden py-4 border-t border-gray-100">
                 <div className="space-y-2">
-                  <Link to="/" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">Beranda</Link>
-                  <Link to="/products" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">Produk</Link>
+                  <Link to="/" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">🏠 Beranda</Link>
+                  <Link to="/products" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">📦 Produk</Link>
                   <Link to="/wishlist" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">❤️ Wishlist</Link>
-                  <Link to="/orders" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">Pesanan</Link>
-                  <Link to="/cart" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">Keranjang</Link>
+                  <Link to="/orders" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">📦 Pesanan</Link>
+                  
+                  {/* ✅ TAMBAHKAN NOTIFIKASI DI MOBILE MENU */}
+                  <Link to="/notifications" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">
+                    🔔 Notifikasi
+                  </Link>
+                  
+                  <Link to="/cart" className="block px-4 py-2 hover:bg-gray-50 rounded-lg">🛒 Keranjang</Link>
                   {user ? (
                     <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg">
                       🚪 Logout

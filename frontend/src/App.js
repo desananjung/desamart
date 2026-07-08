@@ -60,6 +60,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Returns from './pages/Returns';
 import OrderTracking from './pages/OrderTracking';
+import Notifications from './pages/Notifications';
 
 
 
@@ -328,6 +329,7 @@ function App() {
             <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
             <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
             <Route path="/tracking/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
 
             
             {/* UMKM Routes */}

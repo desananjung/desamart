@@ -24,23 +24,17 @@ const enterpriseRoutes = require('./routes/enterpriseRoutes');
 const agricultureRoutes = require('./routes/agricultureRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
-
-// ✅ PERBAIKI INI - NOTIFICATION ROUTES
-// Jika notificationRoutes.js export router langsung:
 const notificationRoutes = require('./routes/notificationRoutes');
-
-// Jika notificationRoutes.js export { router, createNotification }:
-// const { router: notificationRoutes } = require('./routes/notificationRoutes');
-
 const villageServicesRoutes = require('./routes/villageServicesRoutes');
 const desaAdminRoutes = require('./routes/desaAdminRoutes');
 const courierRoutes = require('./routes/courierRoutes');
+const trackingRoutes = require('./routes/trackingRoutes');
 
 const app = express();
 const prisma = new PrismaClient();
 
 // ============================================
-// CORS CONFIGURATION
+// ✅ CORS CONFIGURATION - DI PERBAIKI
 // ============================================
 const allowedOrigins = [
   'http://localhost:3000',
@@ -57,73 +51,60 @@ const allowedOrigins = [
   /\.localhost\.vercel\.app$/
 ];
 
-// CORS Middleware dengan logging
+// ✅ CORS Middleware - Lebih permisif untuk development
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  console.log(`📡 Request from: ${origin} | Method: ${req.method} | Path: ${req.path}`);
-  next();
-});
-
-// CORS Configuration
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) {
-      console.log('✅ No origin, allowing');
-      return callback(null, true);
-    }
-    
-    const isAllowed = allowedOrigins.some(o => {
-      if (o instanceof RegExp) {
-        return o.test(origin);
-      }
-      return o === origin;
-    });
-    
-    if (isAllowed) {
-      console.log(`✅ CORS allowed for: ${origin}`);
-      callback(null, true);
-    } else {
-      console.warn(`⚠️ CORS blocked for: ${origin}`);
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'ngrok-skip-browser-warning',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Allow-Methods'
-  ],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
-
-// Handle preflight requests manually
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  if (origin) {
+  
+  // Untuk development, izinkan semua origin
+  if (process.env.NODE_ENV === 'development' || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else {
     const isAllowed = allowedOrigins.some(o => {
       if (o instanceof RegExp) return o.test(origin);
       return o === origin;
     });
-    
     if (isAllowed) {
       res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Max-Age', '86400');
     }
   }
-  res.sendStatus(204);
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, ngrok-skip-browser-warning');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
 });
+
+// ✅ CORS Configuration (sebagai backup)
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+    // Untuk development, izinkan semua
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    const isAllowed = allowedOrigins.some(o => {
+      if (o instanceof RegExp) return o.test(origin);
+      return o === origin;
+    });
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning']
+}));
 
 // Body parser
 app.use(express.json({ limit: '50mb' }));
@@ -150,10 +131,11 @@ app.use('/api/enterprise', enterpriseRoutes);
 app.use('/api/agriculture', agricultureRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/notifications', notificationRoutes); // ← PASTIKAN INI
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/village-services', villageServicesRoutes);
 app.use('/api/desa-admin', desaAdminRoutes);
 app.use('/api/couriers', courierRoutes);
+app.use('/api/tracking', trackingRoutes);
 
 // ============================================
 // HEALTH CHECK
@@ -161,17 +143,12 @@ app.use('/api/couriers', courierRoutes);
 app.get('/api/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    
     res.json({
       status: 'OK',
       message: 'DesaMart API is running',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
-      database: 'Connected',
-      cors: {
-        allowedOrigins: allowedOrigins.map(o => o instanceof RegExp ? o.source : o),
-        count: allowedOrigins.length
-      }
+      database: 'Connected'
     });
   } catch (error) {
     res.status(500).json({
@@ -208,18 +185,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(60));
   console.log(`📡 Server running on: http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`✅ CORS enabled for ${allowedOrigins.length} origins`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('='.repeat(60));
-  
-  console.log('\n📋 Routes:');
-  console.log('  /api/health - GET - Health check');
-  console.log('  /api/auth - Auth routes');
-  console.log('  /api/products - Product routes');
-  console.log('  /api/orders - Order routes');
-  console.log('  /api/payments - Payment routes');
-  console.log('  /api/notifications - Notification routes');
-  console.log('  /api/couriers - Courier routes');
   console.log('='.repeat(60));
 });
 

@@ -2,12 +2,10 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
-const prisma = new PrismaClient();
-
 // ============================================
 // SEED PAYMENT METHODS & BANK ACCOUNTS
 // ============================================
-async function seedPayments() {
+async function seedPayments(prisma) {
   console.log('💳 Creating payment methods...');
   
   const methods = [
@@ -51,9 +49,9 @@ async function seedPayments() {
 }
 
 // ============================================
-// SEED VILLAGE COURIERS - FIXED
+// SEED VILLAGE COURIERS
 // ============================================
-async function seedCouriers() {
+async function seedCouriers(prisma) {
   console.log('🚚 Creating village couriers...');
 
   const couriers = [
@@ -64,7 +62,10 @@ async function seedCouriers() {
       village: 'Desa Sukamakmur',
       pricePerKm: 5000,
       isActive: true,
+      isVerified: true,
+      available: true,
       rating: 4.8,
+      totalDeliveries: 150,
     },
     {
       name: 'Bu Siti',
@@ -73,7 +74,10 @@ async function seedCouriers() {
       village: 'Desa Sukamakmur',
       pricePerKm: 8000,
       isActive: true,
+      isVerified: true,
+      available: true,
       rating: 4.9,
+      totalDeliveries: 230,
     },
     {
       name: 'Mas Budi',
@@ -82,11 +86,15 @@ async function seedCouriers() {
       village: 'Desa Sukamakmur',
       pricePerKm: 3000,
       isActive: true,
+      isVerified: false,
+      available: true,
       rating: 4.5,
+      totalDeliveries: 45,
     },
   ];
 
   for (const courier of couriers) {
+    // ✅ Gunakan prisma yang diterima sebagai parameter
     const existing = await prisma.villageCourier.findFirst({
       where: { phone: courier.phone }
     });
@@ -111,7 +119,7 @@ async function seedCouriers() {
 // ============================================
 // SEED CATEGORIES
 // ============================================
-async function seedCategories() {
+async function seedCategories(prisma) {
   console.log('📂 Creating categories...');
   const categories = [
     'Makanan & Minuman',
@@ -142,6 +150,9 @@ async function seedCategories() {
 // MAIN FUNCTION
 // ============================================
 async function main() {
+  // ✅ Inisialisasi Prisma di dalam main
+  const prisma = new PrismaClient();
+  
   console.log('🌱 Starting seeding...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
@@ -192,13 +203,13 @@ async function main() {
     console.log('✅ Buyer created');
 
     // 4. Buat kategori
-    await seedCategories();
+    await seedCategories(prisma);
 
     // 5. Seed Payment Methods & Bank Accounts
-    await seedPayments();
+    await seedPayments(prisma);
 
     // 6. Seed Village Couriers
-    await seedCouriers();
+    await seedCouriers(prisma);
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('\n🎉 Seeding completed successfully!');

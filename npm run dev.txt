@@ -1,0 +1,34 @@
+npm run dev
+npm start
+node seed.js
+npx prisma studio
+docker-compose up -d db
+npx prisma migrate dev --name init
+npx prisma db push
+docker ps
+npx prisma migrate reset
+npx prisma generate
+node test.js
+npm install @heroicons/react
+npm install -D tailwindcss@latest postcss@latest autoprefixer@latest
+npx tailwindcss init -p
+npm install
+git pull
+./scripts/deploy.sh
+# Lihat status
+git status
+
+# Lihat log commit
+git log --oneline -5
+
+# Lihat perubahan
+git diff
+
+# Pull perubahan terbaru
+git pull origin main
+
+# Buat branch baru
+git checkout -b feature/nama-fitur
+
+# Switch branch
+git checkout main

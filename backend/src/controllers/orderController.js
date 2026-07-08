@@ -1,7 +1,5 @@
 // backend/src/controllers/orderController.js
 const orderService = require('../services/orderService');
-const orderHistoryService = require('../services/orderHistoryService');
-const escrowService = require('../services/escrowService');
 const { success, created, badRequest, notFound, forbidden } = require('../utils/responseHelper');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -26,15 +24,6 @@ const createOrder = async (req, res, next) => {
       shippingMethod,
       shippingCost,
       courierId
-    );
-    
-    await orderHistoryService.addOrderHistory(
-      order.id,
-      'PENDING',
-      'Pesanan berhasil dibuat',
-      req.user.id,
-      'BUYER',
-      'Menunggu pembayaran'
     );
     
     await createNotification(
@@ -87,11 +76,8 @@ const getMyOrders = async (req, res, next) => {
             }
           },
           payments: true,
-          shipping: true,
-          history: {
-            orderBy: { createdAt: 'desc' },
-            take: 1
-          }
+          shipping: true
+          // ✅ HAPUS history
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -102,8 +88,6 @@ const getMyOrders = async (req, res, next) => {
     
     const formattedOrders = orders.map(order => ({
       ...order,
-      currentStatus: order.history?.[0]?.status || order.status,
-      lastUpdate: order.history?.[0]?.createdAt || order.updatedAt,
       totalAmount: order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     }));
     
@@ -161,11 +145,8 @@ const getOrderDetail = async (req, res, next) => {
           }
         },
         payments: true,
-        shipping: true,
-        history: {
-          orderBy: { createdAt: 'asc' }
-        },
-        escrow: true
+        shipping: true
+        // ✅ HAPUS history dan escrow
       }
     });
     
@@ -242,15 +223,6 @@ const processPayment = async (req, res, next) => {
       }
     });
     
-    await orderHistoryService.addOrderHistory(
-      orderId,
-      'WAITING_PAYMENT',
-      'Menunggu pembayaran',
-      req.user.id,
-      'BUYER',
-      `Metode: ${paymentMethod}`
-    );
-    
     res.json({
       success: true,
       message: 'Pesanan siap dibayar',
@@ -299,15 +271,6 @@ const uploadPaymentProof = async (req, res, next) => {
       }
     });
     
-    await orderHistoryService.addOrderHistory(
-      orderId,
-      'WAITING_PAYMENT',
-      'Bukti transfer telah diupload',
-      req.user.id,
-      'BUYER',
-      'Menunggu verifikasi pembayaran'
-    );
-    
     await createNotification(
       1,
       'PAYMENT',
@@ -353,35 +316,14 @@ const verifyPayment = async (req, res, next) => {
       }
     });
     
-    const totalAmount = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const sellerId = order.items[0]?.product?.sellerId;
-    
-    if (sellerId) {
-      await escrowService.createEscrow(orderId, sellerId, totalAmount);
-    }
-    
-    await orderHistoryService.addOrderHistory(
-      orderId,
-      'PAYMENT_VERIFIED',
-      'Pembayaran berhasil diverifikasi',
-      req.user.id,
-      'ADMIN',
-      note || 'Pembayaran valid'
-    );
+    // ✅ HAPUS escrow
+    // await escrowService.createEscrow(...);
     
     await createNotification(
       order.userId,
       'PAYMENT',
       '✅ Pembayaran Diverifikasi',
       `Pembayaran untuk pesanan #${orderId} telah diverifikasi.`,
-      { orderId }
-    );
-    
-    await createNotification(
-      sellerId,
-      'PAYMENT',
-      '💰 Pembayaran Masuk',
-      `Pembayaran untuk pesanan #${orderId} telah masuk dan ditahan di escrow.`,
       { orderId }
     );
     
@@ -431,20 +373,6 @@ const updateSellerOrderStatus = async (req, res, next) => {
       where: { id: parseInt(id) },
       data: { status }
     });
-    
-    const statusDescriptions = {
-      'PROCESSING': 'Penjual sedang memproses pesanan',
-      'READY_PICKUP': 'Pesanan siap diambil kurir'
-    };
-    
-    await orderHistoryService.addOrderHistory(
-      id,
-      status,
-      statusDescriptions[status],
-      req.user.id,
-      'SELLER',
-      note || ''
-    );
     
     const buyerMessages = {
       'PROCESSING': 'Penjual sedang memproses pesanan Anda',
@@ -511,22 +439,6 @@ const updateCourierStatus = async (req, res, next) => {
       }
     });
     
-    const statusDescriptions = {
-      'PICKED_UP': 'Kurir telah mengambil barang',
-      'IN_TRANSIT': 'Barang sedang dalam perjalanan',
-      'DELIVERED': 'Barang telah sampai tujuan'
-    };
-    
-    await orderHistoryService.addOrderHistory(
-      id,
-      status,
-      statusDescriptions[status],
-      req.user.id,
-      'COURIER',
-      note || '',
-      location || null
-    );
-    
     const buyerMessages = {
       'PICKED_UP': 'Kurir telah mengambil barang Anda',
       'IN_TRANSIT': 'Barang Anda sedang dalam perjalanan',
@@ -580,15 +492,6 @@ const confirmReceived = async (req, res, next) => {
       }
     });
     
-    await orderHistoryService.addOrderHistory(
-      id,
-      'COMPLETED',
-      'Pembeli telah menerima barang',
-      req.user.id,
-      'BUYER',
-      'Pesanan selesai'
-    );
-    
     const sellerId = order.items[0]?.product?.sellerId;
     if (sellerId) {
       await createNotification(
@@ -615,90 +518,24 @@ const confirmReceived = async (req, res, next) => {
 };
 
 // ============================================
-// ADMIN - RELEASE ESCROW
+// ADMIN - RELEASE ESCROW (SEMENTARA DI-NONAKTIFKAN)
 // ============================================
 const releaseEscrow = async (req, res, next) => {
   try {
-    const { orderId } = req.params;
-    const { transferProof, transferNote } = req.body;
-    
-    const order = await prisma.order.findUnique({
-      where: { id: parseInt(orderId) }
-    });
-    
-    if (!order) {
-      return notFound(res, 'Pesanan tidak ditemukan');
-    }
-    
-    if (order.status !== 'COMPLETED') {
-      return badRequest(res, 'Pesanan belum selesai');
-    }
-    
-    const escrow = await escrowService.releaseEscrow(
-      orderId,
-      req.user.id,
-      transferProof,
-      transferNote
-    );
-    
-    await orderHistoryService.addOrderHistory(
-      orderId,
-      'COMPLETED',
-      `Dana dicairkan: Rp${escrow.netAmount.toLocaleString()}`,
-      req.user.id,
-      'ADMIN',
-      transferNote || 'Pencairan dana'
-    );
-    
-    await createNotification(
-      order.userId,
-      'PAYMENT',
-      '💰 Dana Dicairkan',
-      `Dana untuk pesanan #${orderId} telah dicairkan ke rekening Anda.`,
-      { orderId, amount: escrow.netAmount }
-    );
-    
-    success(res, 'Dana berhasil dicairkan', escrow);
+    // TODO: Implement escrow release
+    success(res, 'Fitur escrow sedang dalam pengembangan');
   } catch (error) {
     next(error);
   }
 };
 
 // ============================================
-// GET ORDER HISTORY (TRACKING DETAIL)
+// GET ORDER HISTORY (SEMENTARA DI-NONAKTIFKAN)
 // ============================================
 const getOrderHistory = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
-    const userRole = req.user.role;
-    
-    const order = await prisma.order.findUnique({
-      where: { id: parseInt(id) }
-    });
-    
-    if (!order) {
-      return notFound(res, 'Pesanan tidak ditemukan');
-    }
-    
-    const isOwner = order.userId === userId;
-    const isSeller = await prisma.product.findFirst({
-      where: {
-        sellerId: userId,
-        orderItems: {
-          some: { orderId: parseInt(id) }
-        }
-      }
-    });
-    const isAdmin = userRole === 'ADMIN';
-    
-    if (!isOwner && !isSeller && !isAdmin) {
-      return forbidden(res, 'Anda tidak memiliki akses');
-    }
-    
-    const history = await orderHistoryService.getOrderHistory(id);
-    
-    success(res, 'Riwayat pesanan', history);
+    // TODO: Implement order history
+    success(res, 'Fitur riwayat pesanan sedang dalam pengembangan');
   } catch (error) {
     next(error);
   }
@@ -729,14 +566,6 @@ const updateStatus = async (req, res, next) => {
       where: { id: parseInt(id) },
       data: { status }
     });
-    
-    await orderHistoryService.addOrderHistory(
-      id,
-      status,
-      `Status diubah ke ${status} oleh admin`,
-      req.user.id,
-      'ADMIN'
-    );
     
     res.json({
       success: true,
@@ -799,11 +628,8 @@ const getSellerOrders = async (req, res, next) => {
             }
           },
           payments: true,
-          shipping: true,
-          history: {
-            orderBy: { createdAt: 'desc' },
-            take: 1
-          }
+          shipping: true
+          // ✅ HAPUS history
         },
         orderBy: { createdAt: 'desc' },
         skip,

@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
-  ShoppingBagIcon,  // ← Ganti PackageIcon
+  ShoppingBagIcon,
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
@@ -14,7 +14,7 @@ import {
   UserIcon,
   PhoneIcon,
   MapPinIcon
-} from '@heroicons/react/24/outline'
+} from '@heroicons/react/24/outline';
 
 const Orders = () => {
   const { user } = useAuth();
@@ -62,7 +62,6 @@ const Orders = () => {
       }
     } catch (error) {
       console.error('Error fetching tracking:', error);
-      // Jika tracking belum ada, coba dari delivery
       try {
         const deliveryRes = await api.get(`/couriers/deliveries/order/${orderId}`);
         if (deliveryRes.data.success) {
@@ -146,17 +145,12 @@ const Orders = () => {
     await fetchTracking(order.id);
   };
 
-  const handleTrackOrder = (orderId) => {
-    navigate(`/tracking/${orderId}`);
-  };
-
   const handleCloseDetail = () => {
     setShowDetail(false);
     setSelectedOrder(null);
     setTrackingData(null);
   };
 
-  // Filter counts
   const getStatusCount = (status) => {
     if (status === 'all') return orders.length;
     return orders.filter(o => o.status === status.toUpperCase()).length;
@@ -191,7 +185,6 @@ const Orders = () => {
             </p>
           </div>
           
-          {/* Filter Buttons */}
           <div className="flex gap-2 flex-wrap">
             {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
               <button
@@ -214,7 +207,6 @@ const Orders = () => {
           </div>
         </div>
 
-        {/* Orders List */}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
@@ -239,10 +231,9 @@ const Orders = () => {
                 key={order.id} 
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition overflow-hidden"
               >
-                {/* Order Header */}
                 <div className="p-4 sm:p-6 border-b border-gray-100">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-medium text-gray-800">
                         #{order.orderNumber || order.id}
                       </span>
@@ -277,7 +268,6 @@ const Orders = () => {
                   </div>
                 </div>
 
-                {/* Order Items Preview */}
                 <div className="p-4 sm:p-6">
                   <div className="flex flex-wrap gap-3">
                     {order.items?.slice(0, 4).map((item) => (
@@ -314,18 +304,19 @@ const Orders = () => {
                     )}
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* ============================================ */}
+                  {/* ✅ ACTION BUTTONS - PAKAI LINK UNTUK TRACKING */}
+                  {/* ============================================ */}
                   <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-100">
-                    {/* Track Order Button */}
-                    <button
-                      onClick={() => handleTrackOrder(order.id)}
+                    {/* ✅ Track Order - Pakai Link */}
+                    <Link
+                      to={`/tracking/${order.id}`}
                       className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm font-medium"
                     >
                       <TruckIcon className="w-4 h-4" />
                       Lacak Pesanan
-                    </button>
+                    </Link>
                     
-                    {/* View Detail Button */}
                     <button
                       onClick={() => handleViewDetail(order)}
                       className="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm font-medium text-gray-700"
@@ -334,7 +325,6 @@ const Orders = () => {
                       Detail
                     </button>
 
-                    {/* Action button berdasarkan status */}
                     {order.status === 'PENDING' && order.paymentStatus === 'UNPAID' && (
                       <Link
                         to={`/payment`}
@@ -372,7 +362,6 @@ const Orders = () => {
         {showDetail && selectedOrder && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
               <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <ShoppingBagIcon className="w-5 h-5" />
@@ -387,8 +376,7 @@ const Orders = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Status */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center gap-1 ${getStatusColor(selectedOrder.status)}`}>
                     {getStatusIcon(selectedOrder.status)}
                     {getStatusLabel(selectedOrder.status)}
@@ -400,7 +388,6 @@ const Orders = () => {
                   )}
                 </div>
 
-                {/* Order Info */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Tanggal</p>
@@ -430,7 +417,6 @@ const Orders = () => {
                   </div>
                 </div>
 
-                {/* Items */}
                 <div>
                   <h3 className="font-semibold mb-3">📦 Item Pesanan</h3>
                   <div className="space-y-2">
@@ -461,7 +447,6 @@ const Orders = () => {
                   </div>
                 </div>
 
-                {/* Tracking Info */}
                 {trackingLoading ? (
                   <div className="flex justify-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
@@ -504,18 +489,14 @@ const Orders = () => {
                   </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100">
-                  <button
-                    onClick={() => {
-                      handleCloseDetail();
-                      handleTrackOrder(selectedOrder.id);
-                    }}
+                  <Link
+                    to={`/tracking/${selectedOrder.id}`}
                     className="inline-flex items-center gap-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm font-medium"
                   >
                     <TruckIcon className="w-4 h-4" />
                     Lihat Tracking Lengkap
-                  </button>
+                  </Link>
                   
                   {selectedOrder.status === 'PENDING' && selectedOrder.paymentStatus === 'UNPAID' && (
                     <Link

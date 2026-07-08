@@ -1,15 +1,19 @@
+// backend/src/routes/paymentRoutes.js
 const express = require('express');
 const { authenticate } = require('../middlewares/authMiddleware');
 const { success, badRequest, notFound } = require('../utils/responseHelper');
 const paymentService = require('../services/paymentService');
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient(); // ← TAMBAHKAN INI
+const prisma = new PrismaClient();
+const { createNotification } = require('../utils/notificationHelper');
 
 const router = express.Router();
 
 router.use(authenticate);
 
-// Get all payment methods
+// ============================================
+// GET PAYMENT METHODS
+// ============================================
 router.get('/methods', async (req, res, next) => {
   try {
     console.log('✅ GET /methods called');
@@ -52,7 +56,9 @@ router.get('/methods', async (req, res, next) => {
   }
 });
 
-// Get bank accounts
+// ============================================
+// GET BANK ACCOUNTS
+// ============================================
 router.get('/banks', async (req, res, next) => {
   try {
     console.log('✅ GET /banks called');
@@ -80,25 +86,50 @@ router.get('/banks', async (req, res, next) => {
   }
 });
 
-// Process payment
+// ============================================
+// PROCESS PAYMENT
+// ============================================
 router.post('/process/:orderId', async (req, res, next) => {
   try {
     const { orderId } = req.params;
     const { method, bankAccountId } = req.body;
     
-    console.log('💰 Processing payment:', { orderId, method, bankAccountId, userId: req.user.id });
+    console.log('💰 Processing payment:', { 
+      orderId, 
+      method, 
+      bankAccountId, 
+      userId: req.user.id,
+      userRole: req.user.role 
+    });
 
     if (!method) {
       return badRequest(res, 'Metode pembayaran wajib dipilih');
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: parseInt(orderId) }
+      where: { id: parseInt(orderId) },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { 
+                name: true, 
+                imageUrl: true,
+                sellerId: true 
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!order) {
       return badRequest(res, 'Pesanan tidak ditemukan');
     }
+
+    console.log('✅ Order found:', order.id);
+    console.log('📦 Order status:', order.status);
+    console.log('💰 Order total:', order.total);
 
     if (order.userId !== req.user.id) {
       return badRequest(res, 'Anda tidak memiliki akses ke pesanan ini');
@@ -108,8 +139,7 @@ router.post('/process/:orderId', async (req, res, next) => {
       return badRequest(res, 'Pesanan sudah diproses');
     }
 
-    console.log('✅ Order found:', order.id);
-
+    // Update order
     const updatedOrder = await prisma.order.update({
       where: { id: parseInt(orderId) },
       data: {
@@ -120,14 +150,30 @@ router.post('/process/:orderId', async (req, res, next) => {
       },
       include: {
         items: {
-          include: { product: { select: { name: true, imageUrl: true } } }
+          include: {
+            product: {
+              select: {
+                name: true,
+                imageUrl: true,
+                sellerId: true
+              }
+            }
+          }
         },
-        user: { select: { name: true, email: true } }
+        // ✅ PERBAIKI: Ganti user menjadi User
+        User: {
+          select: {
+            name: true,
+            email: true,
+            // phone: true //
+          }
+        }
       }
     });
 
     console.log('✅ Order updated:', updatedOrder.id);
 
+    // Create payment record
     await prisma.payment.create({
       data: {
         orderId: parseInt(orderId),
@@ -141,14 +187,34 @@ router.post('/process/:orderId', async (req, res, next) => {
 
     console.log('✅ Payment recorded');
 
+    // Notifikasi ke seller
+    for (const item of order.items) {
+      if (item.product?.sellerId) {
+        await createNotification(
+          item.product.sellerId,
+          'PAYMENT',
+          '💰 Pembayaran Masuk',
+          `Pembayaran untuk pesanan #${orderId} telah masuk.`,
+          { orderId: orderId }
+        );
+      }
+    }
+
     success(res, 'Pembayaran berhasil', updatedOrder);
   } catch (error) {
     console.error('❌ Payment error:', error);
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Gagal memproses pembayaran',
+      errors: error.errors || null,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
-// Upload bukti transfer
+// ============================================
+// UPLOAD BUKTI TRANSFER
+// ============================================
 router.post('/upload-proof/:orderId', async (req, res, next) => {
   try {
     const { orderId } = req.params;
@@ -172,7 +238,6 @@ router.post('/upload-proof/:orderId', async (req, res, next) => {
       return badRequest(res, 'Anda tidak memiliki akses ke pesanan ini');
     }
 
-    // Cek status - bisa PENDING atau PAID
     if (order.paymentStatus !== 'PENDING' && order.paymentStatus !== 'PAID') {
       return badRequest(res, 'Pesanan sudah dikonfirmasi');
     }
@@ -185,13 +250,36 @@ router.post('/upload-proof/:orderId', async (req, res, next) => {
       },
       include: {
         items: {
-          include: { product: { select: { name: true } } }
+          include: {
+            product: {
+              select: { 
+                name: true,
+                sellerId: true
+              }
+            }
+          }
         },
-        user: { select: { name: true, email: true } }
+        // ✅ PERBAIKI: Ganti user menjadi User
+        User: {
+          select: {
+            name: true,
+            email: true,
+            //phone: true //
+          }
+        }
       }
     });
 
     console.log('✅ Proof uploaded for order:', updatedOrder.id);
+
+    // Notifikasi ke admin
+    await createNotification(
+      1, // Admin ID
+      'PAYMENT',
+      '💳 Bukti Transfer Baru',
+      `Ada bukti transfer baru untuk pesanan #${orderId}`,
+      { orderId, proofImage }
+    );
 
     success(res, 'Bukti transfer berhasil diupload', updatedOrder);
   } catch (error) {
@@ -199,19 +287,24 @@ router.post('/upload-proof/:orderId', async (req, res, next) => {
     next(error);
   }
 });
-// Confirm payment (untuk seller/admin)
+
+// ============================================
+// CONFIRM PAYMENT (Admin/Seller)
+// ============================================
 router.put('/confirm/:orderId', async (req, res, next) => {
   try {
     const { orderId } = req.params;
     
-    // Cek apakah user adalah seller atau admin
     const order = await prisma.order.findUnique({
       where: { id: parseInt(orderId) },
       include: {
         items: {
           include: {
             product: {
-              select: { sellerId: true }
+              select: { 
+                sellerId: true,
+                name: true
+              }
             }
           }
         }
@@ -222,7 +315,6 @@ router.put('/confirm/:orderId', async (req, res, next) => {
       return badRequest(res, 'Pesanan tidak ditemukan');
     }
 
-    // Cek apakah user adalah seller dari produk ini atau admin
     const isSeller = order.items.some(item => item.product.sellerId === req.user.id);
     const isAdmin = req.user.role === 'ADMIN';
 
@@ -238,11 +330,34 @@ router.put('/confirm/:orderId', async (req, res, next) => {
       },
       include: {
         items: {
-          include: { product: { select: { name: true } } }
+          include: {
+            product: {
+              select: { 
+                name: true,
+                sellerId: true
+              }
+            }
+          }
         },
-        user: { select: { name: true, email: true } }
+        // ✅ PERBAIKI: Ganti user menjadi User
+        User: {
+          select: {
+            name: true,
+            email: true,
+            // phone: true
+          }
+        }
       }
     });
+
+    // Notifikasi ke buyer
+    await createNotification(
+      order.userId,
+      'PAYMENT',
+      '✅ Pembayaran Dikonfirmasi',
+      `Pembayaran untuk pesanan #${orderId} telah dikonfirmasi.`,
+      { orderId }
+    );
 
     success(res, 'Pembayaran dikonfirmasi', updatedOrder);
   } catch (error) {
@@ -251,7 +366,9 @@ router.put('/confirm/:orderId', async (req, res, next) => {
   }
 });
 
-// Test endpoint
+// ============================================
+// TEST ENDPOINT
+// ============================================
 router.get('/test', (req, res) => {
   res.json({ success: true, message: 'Payment routes working!', user: req.user });
 });

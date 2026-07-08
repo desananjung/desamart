@@ -7,499 +7,304 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  SELLER
-  BUYER
-}
-
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-}
-
-// ============================================
-// MODEL USER - Tambahkan relasi UMKM
-// ============================================
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(BUYER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relasi Core
-  products  Product[]
-  cart      Cart?
-  orders    Order[]
-  store     Store?
-  wishlist  WishlistItem[]
-  reviews   Review[]
-  payments  Payment[]
-  umkm      UMKM?
-  
-  // Relasi ke Village (One-to-Many - banyak user bisa di satu desa)
-  villageId Int?
-  village   Village? @relation(fields: [villageId], references: [id])
-
-  // Relasi untuk komunitas
-  communityPosts   UMKMCommunity[]
-  communityComments UMKMComment[]
-  
-  // Relasi Koperasi
-  cooperativeAdmin  CooperativeDigital?
-  cooperativeMember CooperativeDigitalMember[]
-  
-  // Relasi Enterprise
-  enterpriseOwner  Enterprise?
-  enterpriseMember EnterpriseMember[]
-  
-  // Relasi Pertanian
-  farms       Farm[]
-  farmOrders  FarmOrder[]
-
-  // Relasi Layanan Desa
-  villageInfos      VillageInfo[]
-  complaints        Complaint[] @relation("UserComplaints")
-  assignedComplaints Complaint[] @relation("AssignedComplaints")
+  id                 Int                        @id @default(autoincrement())
+  email              String                     @unique
+  password           String
+  name               String
+  role               Role                       @default(BUYER)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  villageId          Int?
+  cart               Cart?
+  assignedComplaints Complaint[]                @relation("AssignedComplaints")
+  complaints         Complaint[]                @relation("UserComplaints")
   complaintResponses ComplaintResponse[]
-  eventParticipants VillageEventParticipant[]
-  documentRequests  VillageDocument[] @relation("DocumentRequester")
-  documentOfficer   VillageDocument[] @relation("DocumentOfficer")
-  villagePotentials VillagePotential[]
-  donations         Donation[]
-  donationDonors    DonationDonor[]
-  disasterReports   DisasterInfo[]
-  notifications Notification[]
-  // TAMBAHKAN: Relasi ke LocalReward
-  localReward LocalReward?
-  
-  // TAMBAHKAN: Relasi ke VillageLogistics sebagai courier
-  courierLogistics VillageLogistics[] @relation("courier")
-
-
-// Ebook
-  villageEbooks    VillageEbook[]        // sebagai uploader
-  
-  // PPOB
-  ppobPayments     PPOB[]               // sebagai payer
-  
-  // Courier
-  courierOrders    VillageCourierOrder[] @relation("sender")   // sebagai sender
-  courierReceived  VillageCourierOrder[] @relation("receiver") // sebagai receiver
-  
-  // Job
-  jobsPosted       VillageJob[]         // sebagai poster
-  jobApplications  VillageJobApplication[] // sebagai applicant
-  
-  // Live Shopping
-  liveShows        VillageLiveShopping[] // sebagai host
-  // ============================================
-  // TAMBAHKAN: Relasi Desa Admin Products
-  // ============================================
-  desaAdminProducts   DesaAdminProduct[]   // sebagai uploader
-  desaAdminOrders     DesaAdminOrder[]     // sebagai buyer
+  cooperativeAdmin   CooperativeDigital?
+  cooperativeMember  CooperativeDigitalMember[]
+  disasterReports    DisasterInfo[]
+  donations          Donation[]
+  donationDonors     DonationDonor[]
+  enterpriseOwner    Enterprise?
+  enterpriseMember   EnterpriseMember[]
+  farms              Farm[]
+  farmOrders         FarmOrder[]
+  localReward        LocalReward?
+  notifications      Notification[]
+  Order              Order[]
+  payments           Payment[]
+  products           Product[]
+  reviews            Review[]
+  store              Store?
+  umkm               UMKM?
+  communityComments  UMKMComment[]
+  communityPosts     UMKMCommunity[]
+  village            Village?                   @relation(fields: [villageId], references: [id])
+  documentOfficer    VillageDocument[]          @relation("DocumentOfficer")
+  documentRequests   VillageDocument[]          @relation("DocumentRequester")
+  eventParticipants  VillageEventParticipant[]
+  villageInfos       VillageInfo[]
+  courierLogistics   VillageLogistics[]         @relation("courier")
+  villagePotentials  VillagePotential[]
+  wishlist           WishlistItem[]
 }
 
-// ============================================
-// MODEL STORE - Tambahkan @unique di storeId
-// ============================================
 model Store {
-  id          Int      @id @default(autoincrement())
-  name        String
-  slug        String   @unique
-  description String?
-  logo        String?
-  banner      String?
-  address     String?
-  phone       String?
-  isActive    Boolean  @default(true)
-  rating      Float    @default(0)
-  totalSales  Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  sellerId    Int      @unique
-  seller      User     @relation(fields: [sellerId], references: [id])
-  products    Product[]
-  umkm        UMKM?
-
-  // TAMBAHKAN: Relasi Enterprise
+  id               Int               @id @default(autoincrement())
+  name             String
+  slug             String            @unique
+  description      String?
+  logo             String?
+  banner           String?
+  address          String?
+  phone            String?
+  isActive         Boolean           @default(true)
+  rating           Float             @default(0)
+  totalSales       Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sellerId         Int               @unique
   enterpriseStores EnterpriseStore[]
+  products         Product[]
+  seller           User              @relation(fields: [sellerId], references: [id])
+  umkm             UMKM?
 }
 
-// ============================================
-// MODEL CATEGORY
-// ============================================
 model Category {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   products  Product[]
 }
 
-// ============================================
-// MODEL PRODUCT - Tambahkan relasi ke UMKMProduct
-// ============================================
 model Product {
-  id          Int      @id @default(autoincrement())
-  name        String
-  slug        String   @unique
-  description String?
-  price       Float    @default(0)
-  stock       Int      @default(0)
-  imageUrl    String?
-  weight      Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  categoryId  Int
-  category    Category @relation(fields: [categoryId], references: [id])
-  sellerId    Int
-  seller      User     @relation(fields: [sellerId], references: [id])
-  storeId     Int?
-  store       Store?   @relation(fields: [storeId], references: [id])
-
-  // Relasi ke Village (One-to-Many - banyak product bisa dari satu desa)
-  villageId   Int?
-  village     Village? @relation(fields: [villageId], references: [id])
-
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  wishlistItems WishlistItem[]
-  reviews       Review[]
-  umkmProducts  UMKMProduct[]
-  promotions    Promotion[]
+  id                  Int                         @id @default(autoincrement())
+  name                String
+  slug                String                      @unique
+  description         String?
+  price               Float                       @default(0)
+  stock               Int                         @default(0)
+  imageUrl            String?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  categoryId          Int
+  sellerId            Int
+  storeId             Int?
+  weight              Float?
+  villageId           Int?
+  cartItems           CartItem[]
   cooperativeProducts CooperativeDigitalProduct[]
-  enterpriseProducts EnterpriseProduct[]
-
-
-// TAMBAHKAN: Relasi Live Shopping
-  liveProducts VillageLiveProduct[]
+  enterpriseProducts  EnterpriseProduct[]
+  orderItems          OrderItem[]
+  category            Category                    @relation(fields: [categoryId], references: [id])
+  seller              User                        @relation(fields: [sellerId], references: [id])
+  store               Store?                      @relation(fields: [storeId], references: [id])
+  village             Village?                    @relation(fields: [villageId], references: [id])
+  promotions          Promotion[]
+  reviews             Review[]
+  umkmProducts        UMKMProduct[]
+  wishlistItems       WishlistItem[]
 }
-// ============================================
-// MODEL CART
-// ============================================
-model Cart {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id])
   items     CartItem[]
 }
 
-// ============================================
-// MODEL CART_ITEM
-// ============================================
 model CartItem {
   id        Int      @id @default(autoincrement())
   quantity  Int      @default(1)
+  cartId    Int
+  productId Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  cartId    Int
   cart      Cart     @relation(fields: [cartId], references: [id])
-  productId Int
   product   Product  @relation(fields: [productId], references: [id])
 }
 
-// ============================================
-// MODEL ORDER
-// ============================================
-model Order {
-  id          Int         @id @default(autoincrement())
-  userId      Int
-  user        User        @relation(fields: [userId], references: [id])
-  total       Float       @default(0)
-  status      OrderStatus @default(PENDING)
-  address     String
-  phone       String
-  note        String?
-  
-  paymentMethod String?
-  paymentStatus String?
-  paymentProof  String?
-  paidAt        DateTime?
-  
-  shippingMethod String?
-  shippingCost   Float?
-  shippingNumber String?
-  trackingStatus String?
-  deliveredAt    DateTime?
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  items       OrderItem[]
-  reviews     Review[]
-  payments    Payment[]
-  shipping    Shipping?
-
-  // Relasi Enterprise
-  enterpriseOrders EnterpriseOrder[]
-  
-  // TAMBAHKAN: Relasi ke VillageLogistics
-  villageLogistics VillageLogistics?
-}
-
-// ============================================
-// MODEL ORDER_ITEM
-// ============================================
 model OrderItem {
   id        Int      @id @default(autoincrement())
   quantity  Int
   price     Float
+  orderId   Int
+  productId Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  orderId   Int
   order     Order    @relation(fields: [orderId], references: [id])
-  productId Int
   product   Product  @relation(fields: [productId], references: [id])
 }
 
-// ============================================
-// MODEL WISHLIST_ITEM
-// ============================================
 model WishlistItem {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
   productId Int
   product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, productId])
 }
 
-// ============================================
-// MODEL REVIEW
-// ============================================
 model Review {
   id        Int      @id @default(autoincrement())
   rating    Int      @default(5)
   comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
   productId Int
-  product   Product  @relation(fields: [productId], references: [id])
   orderId   Int
   order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
-// ============================================
-// MODEL PAYMENT
-// ============================================
 model Payment {
-  id          Int      @id @default(autoincrement())
-  orderId     Int
-  order       Order    @relation(fields: [orderId], references: [id])
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  
-  method      String
-  amount      Float
-  status      String
-  proof       String?
-  paidAt      DateTime?
-  expiresAt   DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int       @id @default(autoincrement())
+  orderId   Int
+  userId    Int
+  method    String
+  amount    Float
+  status    String
+  proof     String?
+  paidAt    DateTime?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  order     Order     @relation(fields: [orderId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
 
   @@index([orderId])
   @@index([userId])
   @@index([status])
 }
 
-// ============================================
-// MODEL SHIPPING
-// ============================================
 model Shipping {
-  id          Int      @id @default(autoincrement())
-  orderId     Int      @unique
-  order       Order    @relation(fields: [orderId], references: [id])
-  
-  method      String
-  cost        Float
+  id             Int       @id @default(autoincrement())
+  orderId        Int       @unique
+  method         String
+  cost           Float
   trackingNumber String?
-  status      String
-  address     String
-  receiverName String?
-  receiverPhone String?
-  
-  shippedAt   DateTime?
-  deliveredAt DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status         String
+  address        String
+  receiverName   String?
+  receiverPhone  String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  order          Order     @relation(fields: [orderId], references: [id])
 
   @@index([status])
 }
 
-// ============================================
-// MODEL UMKM - PERBAIKI relasi store
-// ============================================
 model UMKM {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  category    String
-  subCategory String?
-  address     String
-  phone       String
-  email       String
-  website     String?
-  socialMedia Json?
-  
-  isVerified  Boolean  @default(false)
-  verifiedAt  DateTime?
-  verifiedBy  Int?
-  
-  certificate String?
-  certificateId String?
-  
-  status      String   @default("PENDING")
-  
-  businessLicense String?
-  idCard       String?
-  photo        String?
-  
-  userId      Int      @unique
-  user        User     @relation(fields: [userId], references: [id])
-  
-  storeId     Int      @unique
-  store       Store    @relation(fields: [storeId], references: [id])
-  
-  // Relasi ke Village (One-to-Many)
-  villageId   Int?
-  village     Village? @relation(fields: [villageId], references: [id])
-  
-  products    UMKMProduct[]
-  promotions  Promotion[]
+  id               Int               @id @default(autoincrement())
+  userId           Int               @unique
+  name             String
+  description      String?
+  address          String
+  phone            String
+  verifiedAt       DateTime?
+  verifiedBy       Int?
+  website          String?
+  socialMedia      Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  businessLicense  String?
+  certificate      String?
+  certificateId    String?
+  email            String
+  idCard           String?
+  isVerified       Boolean           @default(false)
+  photo            String?
+  storeId          Int               @unique
+  subCategory      String?
+  category         String
+  status           String            @default("PENDING")
+  villageId        Int?
   financialRecords FinancialRecord[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  promotions       Promotion[]
+  store            Store             @relation(fields: [storeId], references: [id])
+  user             User              @relation(fields: [userId], references: [id])
+  village          Village?          @relation(fields: [villageId], references: [id])
+  products         UMKMProduct[]
 }
 
-// ============================================
-// MODEL UMKM_PRODUCT
-// ============================================
 model UMKMProduct {
-  id          Int      @id @default(autoincrement())
-  productId   Int
-  product     Product  @relation(fields: [productId], references: [id])
-  umkmId      Int
-  umkm        UMKM     @relation(fields: [umkmId], references: [id])
-  
+  id             Int       @id @default(autoincrement())
+  productId      Int
+  umkmId         Int
   productionDate DateTime?
   expiryDate     DateTime?
   batchNumber    String?
-  
-  halal         Boolean @default(false)
-  organic       Boolean @default(false)
-  bpom          Boolean @default(false)
-  bpomNumber    String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  halal          Boolean   @default(false)
+  organic        Boolean   @default(false)
+  bpom           Boolean   @default(false)
+  bpomNumber     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  product        Product   @relation(fields: [productId], references: [id])
+  umkm           UMKM      @relation(fields: [umkmId], references: [id])
 }
 
-// ============================================
-// MODEL PROMOTION - PERBAIKI relasi
-// ============================================
 model Promotion {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  type        String
-  
-  discountType String
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  type          String
+  discountType  String
   discountValue Float
-  
-  startDate   DateTime
-  endDate     DateTime
-  
-  productId   Int?
-  product     Product? @relation(fields: [productId], references: [id])
-  umkmId      Int?
-  umkm        UMKM?    @relation(fields: [umkmId], references: [id])
-  
-  isActive    Boolean  @default(true)
-  
-  maxUsage    Int      @default(-1)
-  usedCount   Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  startDate     DateTime
+  endDate       DateTime
+  productId     Int?
+  umkmId        Int?
+  isActive      Boolean  @default(true)
+  maxUsage      Int      @default(-1)
+  usedCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  product       Product? @relation(fields: [productId], references: [id])
+  umkm          UMKM?    @relation(fields: [umkmId], references: [id])
 }
 
-// ============================================
-// MODEL UMKM_COMMUNITY - PERBAIKI author
-// ============================================
 model UMKMCommunity {
-  id          Int      @id @default(autoincrement())
-  title       String
-  content     String
-  category    String
-  
-  authorId    Int
-  author      User     @relation(fields: [authorId], references: [id])
-  
-  likes       Int      @default(0)
-  views       Int      @default(0)
-  
-  status      String   @default("PUBLISHED")
-  
-  comments    UMKMComment[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int           @id @default(autoincrement())
+  title     String
+  content   String
+  category  String
+  authorId  Int
+  likes     Int           @default(0)
+  views     Int           @default(0)
+  status    String        @default("PUBLISHED")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  comments  UMKMComment[]
+  author    User          @relation(fields: [authorId], references: [id])
 }
 
-// ============================================
-// MODEL UMKM_COMMENT - PERBAIKI relasi parent-child
-// ============================================
 model UMKMComment {
-  id          Int      @id @default(autoincrement())
-  content     String
-  
-  authorId    Int
-  author      User     @relation(fields: [authorId], references: [id])
-  postId      Int
-  post        UMKMCommunity @relation(fields: [postId], references: [id])
-  
-  parentId    Int?
-  parent      UMKMComment? @relation("UMKMCommentReplies", fields: [parentId], references: [id])
-  
-  // Relasi balik untuk children
-  children    UMKMComment[] @relation("UMKMCommentReplies")
-  
-  likes       Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int           @id @default(autoincrement())
+  content   String
+  authorId  Int
+  postId    Int
+  parentId  Int?
+  likes     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  author    User          @relation(fields: [authorId], references: [id])
+  parent    UMKMComment?  @relation("UMKMCommentReplies", fields: [parentId], references: [id])
+  children  UMKMComment[] @relation("UMKMCommentReplies")
+  post      UMKMCommunity @relation(fields: [postId], references: [id])
 }
 
-// ============================================
-// MODEL FINANCIAL_RECORD
-// ============================================
 model FinancialRecord {
   id          Int      @id @default(autoincrement())
   type        String
@@ -508,16 +313,774 @@ model FinancialRecord {
   description String
   date        DateTime
   reference   String?
-  
   umkmId      Int
-  umkm        UMKM     @relation(fields: [umkmId], references: [id])
-  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  umkm        UMKM     @relation(fields: [umkmId], references: [id])
 }
-// ============================================
-// ENUM KOPERASI DIGITAL
-// ============================================
+
+model CooperativeDigital {
+  id                 Int                              @id @default(autoincrement())
+  name               String
+  slug               String                           @unique
+  type               CooperativeDigitalType           @default(KUD)
+  description        String?
+  registrationNumber String
+  establishmentDate  DateTime
+  address            String
+  phone              String
+  email              String
+  website            String?
+  certificateUrl     String?
+  logo               String?
+  banner             String?
+  status             CooperativeDigitalStatus         @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedBy         Int?
+  adminId            Int                              @unique
+  createdAt          DateTime                         @default(now())
+  updatedAt          DateTime                         @updatedAt
+  admin              User                             @relation(fields: [adminId], references: [id])
+  announcements      CooperativeDigitalAnnouncement[]
+  loans              CooperativeDigitalLoan[]
+  meetings           CooperativeDigitalMeeting[]
+  members            CooperativeDigitalMember[]
+  products           CooperativeDigitalProduct[]
+  savings            CooperativeDigitalSavings[]
+  transactions       CooperativeDigitalTransaction[]
+}
+
+model CooperativeDigitalMember {
+  id               Int                             @id @default(autoincrement())
+  cooperativeId    Int
+  userId           Int
+  memberNumber     String                          @unique
+  joinDate         DateTime                        @default(now())
+  isActive         Boolean                         @default(true)
+  mandatorySavings Float                           @default(0)
+  voluntarySavings Float                           @default(0)
+  totalSavings     Float                           @default(0)
+  totalLoan        Float                           @default(0)
+  totalPaid        Float                           @default(0)
+  remainingLoan    Float                           @default(0)
+  accumulatedSHU   Float                           @default(0)
+  distributedSHU   Float                           @default(0)
+  role             String                          @default("MEMBER")
+  createdAt        DateTime                        @default(now())
+  updatedAt        DateTime                        @updatedAt
+  loans            CooperativeDigitalLoan[]
+  cooperative      CooperativeDigital              @relation(fields: [cooperativeId], references: [id])
+  user             User                            @relation(fields: [userId], references: [id])
+  savings          CooperativeDigitalSavings[]
+  transactionsFrom CooperativeDigitalTransaction[] @relation("fromMember")
+  transactionsTo   CooperativeDigitalTransaction[] @relation("toMember")
+  votes            CooperativeDigitalVote[]
+}
+
+model CooperativeDigitalProduct {
+  id             Int                @id @default(autoincrement())
+  cooperativeId  Int
+  productId      Int
+  price          Float
+  stock          Int                @default(0)
+  isActive       Boolean            @default(true)
+  memberDiscount Float              @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  cooperative    CooperativeDigital @relation(fields: [cooperativeId], references: [id])
+  product        Product            @relation(fields: [productId], references: [id])
+}
+
+model CooperativeDigitalSavings {
+  id              Int                      @id @default(autoincrement())
+  cooperativeId   Int
+  memberId        Int
+  type            String
+  amount          Float
+  description     String?
+  transactionDate DateTime                 @default(now())
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  cooperative     CooperativeDigital       @relation(fields: [cooperativeId], references: [id])
+  member          CooperativeDigitalMember @relation(fields: [memberId], references: [id])
+}
+
+model CooperativeDigitalLoan {
+  id                Int                             @id @default(autoincrement())
+  cooperativeId     Int
+  memberId          Int
+  amount            Float
+  interestRate      Float                           @default(0)
+  tenure            Int
+  purpose           String?
+  status            CooperativeDigitalLoanStatus    @default(PENDING)
+  approvedAt        DateTime?
+  disbursedAt       DateTime?
+  dueDate           DateTime
+  paidAmount        Float                           @default(0)
+  remainingAmount   Float                           @default(0)
+  installmentAmount Float
+  penaltyAmount     Float                           @default(0)
+  lateDays          Int                             @default(0)
+  createdAt         DateTime                        @default(now())
+  updatedAt         DateTime                        @updatedAt
+  cooperative       CooperativeDigital              @relation(fields: [cooperativeId], references: [id])
+  member            CooperativeDigitalMember        @relation(fields: [memberId], references: [id])
+  payments          CooperativeDigitalLoanPayment[]
+}
+
+model CooperativeDigitalLoanPayment {
+  id          Int                    @id @default(autoincrement())
+  loanId      Int
+  amount      Float
+  principal   Float
+  interest    Float
+  penalty     Float                  @default(0)
+  paymentDate DateTime               @default(now())
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  loan        CooperativeDigitalLoan @relation(fields: [loanId], references: [id])
+}
+
+/// ============================================
+model CooperativeDigitalTransaction {
+  id            Int                               @id @default(autoincrement())
+  cooperativeId Int
+  memberId      Int?
+  type          CooperativeDigitalTransactionType
+  amount        Float
+  description   String?
+  toMemberId    Int?
+  status        String                            @default("COMPLETED")
+  createdAt     DateTime                          @default(now())
+  updatedAt     DateTime                          @updatedAt
+  cooperative   CooperativeDigital                @relation(fields: [cooperativeId], references: [id])
+  member        CooperativeDigitalMember?         @relation("fromMember", fields: [memberId], references: [id])
+  toMember      CooperativeDigitalMember?         @relation("toMember", fields: [toMemberId], references: [id])
+}
+
+model CooperativeDigitalMeeting {
+  id            Int                      @id @default(autoincrement())
+  cooperativeId Int
+  title         String
+  description   String?
+  date          DateTime
+  location      String?
+  onlineLink    String?
+  hasVoting     Boolean                  @default(false)
+  votingResults Json?
+  status        String                   @default("SCHEDULED")
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  cooperative   CooperativeDigital       @relation(fields: [cooperativeId], references: [id])
+  votes         CooperativeDigitalVote[]
+}
+
+model CooperativeDigitalVote {
+  id        Int                       @id @default(autoincrement())
+  meetingId Int
+  anggotaId Int
+  choice    String
+  comment   String?
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+  anggota   CooperativeDigitalMember  @relation(fields: [anggotaId], references: [id])
+  meeting   CooperativeDigitalMeeting @relation(fields: [meetingId], references: [id])
+
+  @@unique([meetingId, anggotaId])
+}
+
+model CooperativeDigitalAnnouncement {
+  id            Int                @id @default(autoincrement())
+  cooperativeId Int
+  title         String
+  content       String
+  isUrgent      Boolean            @default(false)
+  targetRole    String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  cooperative   CooperativeDigital @relation(fields: [cooperativeId], references: [id])
+}
+
+model VillageInfo {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  category  String
+  imageUrl  String?
+  isPinned  Boolean  @default(false)
+  isUrgent  Boolean  @default(false)
+  authorId  Int
+  views     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model Complaint {
+  id          Int                 @id @default(autoincrement())
+  title       String
+  description String
+  category    String
+  location    String?
+  imageUrl    String?
+  status      ComplaintStatus     @default(PENDING)
+  reporterId  Int
+  assignedTo  Int?
+  resolvedAt  DateTime?
+  resolution  String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  assigned    User?               @relation("AssignedComplaints", fields: [assignedTo], references: [id])
+  reporter    User                @relation("UserComplaints", fields: [reporterId], references: [id])
+  responses   ComplaintResponse[]
+}
+
+model ComplaintResponse {
+  id          Int       @id @default(autoincrement())
+  content     String
+  isOfficial  Boolean   @default(false)
+  complaintId Int
+  authorId    Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  author      User      @relation(fields: [authorId], references: [id])
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+}
+
+model VillageEvent {
+  id           Int                       @id @default(autoincrement())
+  title        String
+  description  String?
+  location     String
+  startDate    DateTime
+  endDate      DateTime
+  category     String
+  imageUrl     String?
+  organizer    String
+  contact      String?
+  isPublished  Boolean                   @default(true)
+  isFeatured   Boolean                   @default(false)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  participants VillageEventParticipant[]
+}
+
+model VillageEventParticipant {
+  id        Int          @id @default(autoincrement())
+  eventId   Int
+  userId    Int
+  status    String       @default("CONFIRMED")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  event     VillageEvent @relation(fields: [eventId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+}
+
+model VillageDocument {
+  id          Int            @id @default(autoincrement())
+  title       String
+  description String?
+  type        DocumentType
+  fileUrl     String?
+  requesterId Int
+  officerId   Int?
+  status      DocumentStatus @default(PENDING)
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  officer     User?          @relation("DocumentOfficer", fields: [officerId], references: [id])
+  requester   User           @relation("DocumentRequester", fields: [requesterId], references: [id])
+}
+
+model VillagePotential {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  category    String
+  location    String?
+  quantity    String?
+  imageUrl    String?
+  isVerified  Boolean   @default(false)
+  verifiedAt  DateTime?
+  verifiedBy  Int?
+  submittedBy Int
+  views       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  submitter   User      @relation(fields: [submittedBy], references: [id])
+}
+
+model Donation {
+  id              Int             @id @default(autoincrement())
+  title           String
+  description     String
+  targetAmount    Float
+  collectedAmount Float           @default(0)
+  category        String
+  organizerId     Int
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean         @default(true)
+  imageUrl        String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  organizer       User            @relation(fields: [organizerId], references: [id])
+  donors          DonationDonor[]
+}
+
+model DonationDonor {
+  id          Int      @id @default(autoincrement())
+  donationId  Int
+  donorId     Int
+  amount      Float
+  isAnonymous Boolean  @default(false)
+  message     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  donation    Donation @relation(fields: [donationId], references: [id])
+  donor       User     @relation(fields: [donorId], references: [id])
+}
+
+model DisasterInfo {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  type        String
+  location    String
+  severity    String
+  reportedBy  Int
+  isActive    Boolean  @default(true)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reporter    User     @relation(fields: [reportedBy], references: [id])
+}
+
+model Enterprise {
+  id           Int                     @id @default(autoincrement())
+  name         String
+  slug         String                  @unique
+  description  String?
+  type         BusinessType            @default(UMKM)
+  logo         String?
+  banner       String?
+  address      String
+  phone        String
+  email        String
+  website      String?
+  isVerified   Boolean                 @default(false)
+  verifiedAt   DateTime?
+  verifiedBy   Int?
+  status       String                  @default("ACTIVE")
+  ownerId      Int                     @unique
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  owner        User                    @relation(fields: [ownerId], references: [id])
+  analytics    EnterpriseAnalytic[]
+  integrations EnterpriseIntegration[]
+  members      EnterpriseMember[]
+  orders       EnterpriseOrder[]
+  products     EnterpriseProduct[]
+  stores       EnterpriseStore[]
+}
+
+model EnterpriseStore {
+  id           Int        @id @default(autoincrement())
+  enterpriseId Int
+  storeId      Int
+  name         String
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  store        Store      @relation(fields: [storeId], references: [id])
+
+  @@unique([enterpriseId, storeId])
+}
+
+model EnterpriseMember {
+  id           Int            @id @default(autoincrement())
+  enterpriseId Int
+  userId       Int
+  role         EnterpriseRole @default(STAFF)
+  permissions  Json?
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  enterprise   Enterprise     @relation(fields: [enterpriseId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
+
+  @@unique([enterpriseId, userId])
+}
+
+model EnterpriseProduct {
+  id           Int        @id @default(autoincrement())
+  enterpriseId Int
+  productId    Int
+  price        Float
+  stock        Int        @default(0)
+  isActive     Boolean    @default(true)
+  featured     Boolean    @default(false)
+  weight       Float?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id])
+
+  @@unique([enterpriseId, productId])
+}
+
+model EnterpriseOrder {
+  id           Int        @id @default(autoincrement())
+  enterpriseId Int
+  orderId      Int
+  status       String     @default("PENDING")
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  order        Order      @relation(fields: [orderId], references: [id])
+
+  @@unique([enterpriseId, orderId])
+}
+
+model EnterpriseIntegration {
+  id           Int        @id @default(autoincrement())
+  enterpriseId Int
+  platform     String
+  apiKey       String?
+  apiSecret    String?
+  accessToken  String?
+  refreshToken String?
+  isActive     Boolean    @default(true)
+  lastSync     DateTime?
+  settings     Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+}
+
+model EnterpriseAnalytic {
+  id           Int        @id @default(autoincrement())
+  enterpriseId Int
+  date         DateTime
+  revenue      Float      @default(0)
+  orders       Int        @default(0)
+  products     Int        @default(0)
+  visitors     Int        @default(0)
+  conversion   Float      @default(0)
+  topProducts  Json?
+  topStores    Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+
+  @@index([enterpriseId, date])
+}
+
+model Farm {
+  id          Int             @id @default(autoincrement())
+  name        String
+  location    String
+  area        Float
+  description String?
+  imageUrl    String?
+  farmerId    Int
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  farmer      User            @relation(fields: [farmerId], references: [id])
+  commodities FarmCommodity[]
+  logistics   FarmLogistics[]
+  harvests    Harvest[]
+}
+
+model FarmCommodity {
+  id               Int               @id @default(autoincrement())
+  farmId           Int
+  commodity        String
+  category         CommodityCategory @default(SAYURAN)
+  variety          String?
+  plantingDate     DateTime
+  harvestEstimate  DateTime
+  areaPlanted      Float
+  quantityEstimate Float
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  farm             Farm              @relation(fields: [farmId], references: [id])
+  harvests         Harvest[]
+}
+
+model Harvest {
+  id           Int              @id @default(autoincrement())
+  farmId       Int
+  commodityId  Int
+  quantity     Float
+  unit         String
+  quality      CommodityQuality @default(STANDAR)
+  harvestDate  DateTime
+  expiryDate   DateTime?
+  price        Float
+  imageUrl     String?
+  status       HarvestStatus    @default(PANEN)
+  isAggregated Boolean          @default(false)
+  aggregatedBy Int?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  logistics    FarmLogistics[]
+  commodity    FarmCommodity    @relation(fields: [commodityId], references: [id])
+  farm         Farm             @relation(fields: [farmId], references: [id])
+}
+
+model MarketPrice {
+  id        Int               @id @default(autoincrement())
+  commodity String
+  category  CommodityCategory @default(SAYURAN)
+  price     Float
+  unit      String
+  market    String
+  quality   CommodityQuality  @default(STANDAR)
+  date      DateTime          @default(now())
+  source    String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+model SeasonInfo {
+  id                   Int      @id @default(autoincrement())
+  season               String
+  year                 Int
+  description          String?
+  prediction           String?
+  startDate            DateTime
+  endDate              DateTime
+  recommendedCommodity String?
+  tips                 String?
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model FarmOrder {
+  id            Int              @id @default(autoincrement())
+  buyerId       Int
+  commodity     String
+  quantity      Float
+  unit          String
+  targetPrice   Float?
+  targetQuality CommodityQuality @default(STANDAR)
+  harvestDate   DateTime?
+  location      String?
+  status        String           @default("OPEN")
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  buyer         User             @relation(fields: [buyerId], references: [id])
+}
+
+model FarmLogistics {
+  id           Int      @id @default(autoincrement())
+  farmId       Int
+  harvestId    Int
+  destination  String
+  distance     Float?
+  transport    String
+  logisticsFee Float
+  deliveryDate DateTime
+  status       String   @default("SCHEDULED")
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  farm         Farm     @relation(fields: [farmId], references: [id])
+  harvest      Harvest  @relation(fields: [harvestId], references: [id])
+}
+
+model VillageEconomy {
+  id                Int      @id @default(autoincrement())
+  villageId         Int
+  totalUMKM         Int      @default(0)
+  totalRevenue      Float    @default(0)
+  totalTransactions Int      @default(0)
+  growthRate        Float    @default(0)
+  month             Int
+  year              Int
+  topProducts       Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  village           Village  @relation(fields: [villageId], references: [id])
+
+  @@unique([villageId, month, year])
+}
+
+model Village {
+  id                Int                @id @default(autoincrement())
+  name              String
+  district          String
+  regency           String
+  province          String
+  latitude          Float?
+  longitude         Float?
+  population        Int?
+  area              Float?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  products          Product[]
+  umkm              UMKM[]
+  users             User[]
+  economy           VillageEconomy[]
+  deliveryLogistics VillageLogistics[] @relation("delivery")
+  pickupLogistics   VillageLogistics[] @relation("pickup")
+}
+
+model LocalReward {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  totalPoints     Int      @default(0)
+  level           String   @default("PEMULA")
+  localPurchases  Int      @default(0)
+  totalPurchases  Int      @default(0)
+  localPercentage Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model VillageLogistics {
+  id                Int      @id @default(autoincrement())
+  orderId           Int      @unique
+  pickupVillageId   Int
+  deliveryVillageId Int
+  courierId         Int?
+  distance          Float
+  cost              Float
+  estimatedTime     String
+  status            String   @default("PENDING")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  courier           User?    @relation("courier", fields: [courierId], references: [id])
+  deliveryVillage   Village  @relation("delivery", fields: [deliveryVillageId], references: [id])
+  order             Order    @relation(fields: [orderId], references: [id])
+  pickupVillage     Village  @relation("pickup", fields: [pickupVillageId], references: [id])
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  type      String
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model PaymentMethod {
+  id           Int           @id @default(autoincrement())
+  name         String
+  code         String        @unique
+  description  String?
+  icon         String?
+  isActive     Boolean       @default(true)
+  isOnline     Boolean       @default(true)
+  fee          Float         @default(0)
+  minAmount    Float         @default(0)
+  maxAmount    Float         @default(999999999)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  bankAccounts BankAccount[]
+}
+
+model BankAccount {
+  id              Int           @id @default(autoincrement())
+  paymentMethodId Int
+  bankName        String
+  accountNumber   String        @unique
+  accountHolder   String
+  branch          String?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+}
+
+model OrderStatusHistory {
+  id          Int         @id @default(autoincrement())
+  orderId     Int
+  status      OrderStatus
+  description String
+  note        String?
+  actorId     Int
+  actorRole   String
+  location    String?
+  metadata    Json?
+  createdAt   DateTime    @default(now())
+
+  @@map("order_status_histories")
+}
+
+model Escrow {
+  id            Int          @id @default(autoincrement())
+  orderId       Int          @unique
+  sellerId      Int
+  amount        Float
+  fee           Float        @default(0.02)
+  netAmount     Float
+  status        EscrowStatus @default(HELD)
+  heldAt        DateTime     @default(now())
+  releasedAt    DateTime?
+  cancelledAt   DateTime?
+  transferProof String?
+  transferNote  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("escrows")
+}
+
+model Order {
+  id               Int               @id @default(autoincrement())
+  userId           Int
+  total            Float             @default(0)
+  status           OrderStatus       @default(PENDING)
+  address          String
+  phone            String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime
+  note             String?
+  deliveredAt      DateTime?
+  paidAt           DateTime?
+  paymentMethod    String?
+  paymentProof     String?
+  paymentStatus    String?
+  shippingCost     Float?
+  shippingMethod   String?
+  shippingNumber   String?
+  trackingStatus   String?
+  enterpriseOrders EnterpriseOrder[]
+  User             User              @relation(fields: [userId], references: [id])
+  items            OrderItem[]
+  payments         Payment[]
+  reviews          Review[]
+  shipping         Shipping?
+  villageLogistics VillageLogistics?
+}
+
+enum Role {
+  ADMIN
+  SELLER
+  BUYER
+}
+
 enum CooperativeDigitalType {
   KUD
   KSP
@@ -554,267 +1117,6 @@ enum CooperativeDigitalTransactionType {
   PENALTY
 }
 
-// ============================================
-// MODEL COOPERATIVE_DIGITAL
-// ============================================
-model CooperativeDigital {
-  id          Int      @id @default(autoincrement())
-  name        String
-  slug        String   @unique
-  type        CooperativeDigitalType @default(KUD)
-  description String?
-  
-  registrationNumber String
-  establishmentDate DateTime
-  address     String
-  phone       String
-  email       String
-  website     String?
-  
-  certificateUrl String?
-  logo          String?
-  banner        String?
-  
-  status      CooperativeDigitalStatus @default(PENDING)
-  verifiedAt  DateTime?
-  verifiedBy  Int?
-  
-  adminId     Int      @unique
-  admin       User     @relation(fields: [adminId], references: [id])
-  
-  members     CooperativeDigitalMember[]
-  products    CooperativeDigitalProduct[]
-  savings     CooperativeDigitalSavings[]
-  loans       CooperativeDigitalLoan[]
-  transactions CooperativeDigitalTransaction[]
-  meetings    CooperativeDigitalMeeting[]
-  announcements CooperativeDigitalAnnouncement[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_MEMBER
-// ============================================
-model CooperativeDigitalMember {
-  id          Int      @id @default(autoincrement())
-  cooperativeId Int
-  cooperative  CooperativeDigital @relation(fields: [cooperativeId], references: [id])
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  
-  memberNumber String   @unique
-  joinDate    DateTime @default(now())
-  isActive    Boolean  @default(true)
-  
-  mandatorySavings Float @default(0)
-  voluntarySavings  Float @default(0)
-  totalSavings      Float @default(0)
-  
-  totalLoan   Float @default(0)
-  totalPaid   Float @default(0)
-  remainingLoan Float @default(0)
-  
-  accumulatedSHU Float @default(0)
-  distributedSHU Float @default(0)
-  
-  role        String @default("MEMBER")
-  
-  savings     CooperativeDigitalSavings[]
-  loans       CooperativeDigitalLoan[]
-  transactionsFrom CooperativeDigitalTransaction[] @relation("fromMember")
-  transactionsTo   CooperativeDigitalTransaction[] @relation("toMember")
-  votes       CooperativeDigitalVote[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_PRODUCT
-// ============================================
-model CooperativeDigitalProduct {
-  id          Int      @id @default(autoincrement())
-  cooperativeId Int
-  cooperative  CooperativeDigital @relation(fields: [cooperativeId], references: [id])
-  productId   Int
-  product     Product  @relation(fields: [productId], references: [id])
-  
-  price       Float
-  stock       Int      @default(0)
-  isActive    Boolean  @default(true)
-  memberDiscount Float @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_SAVINGS
-// ============================================
-model CooperativeDigitalSavings {
-  id          Int      @id @default(autoincrement())
-  
-  // TAMBAHKAN: Relasi ke CooperativeDigital
-  cooperativeId Int
-  cooperative  CooperativeDigital @relation(fields: [cooperativeId], references: [id])
-  
-  memberId    Int
-  member      CooperativeDigitalMember @relation(fields: [memberId], references: [id])
-  
-  type        String   // MANDATORY, VOLUNTARY
-  amount      Float
-  description String?
-  transactionDate DateTime @default(now())
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_LOAN
-// ============================================
-model CooperativeDigitalLoan {
-  id          Int      @id @default(autoincrement())
-  
-  // TAMBAHKAN: Relasi ke CooperativeDigital
-  cooperativeId Int
-  cooperative  CooperativeDigital @relation(fields: [cooperativeId], references: [id])
-  
-  memberId    Int
-  member      CooperativeDigitalMember @relation(fields: [memberId], references: [id])
-  
-  amount      Float
-  interestRate Float @default(0)
-  tenure      Int
-  purpose     String?
-  
-  status      CooperativeDigitalLoanStatus @default(PENDING)
-  approvedAt  DateTime?
-  disbursedAt DateTime?
-  dueDate     DateTime
-  
-  paidAmount  Float @default(0)
-  remainingAmount Float @default(0)
-  installmentAmount Float
-  
-  penaltyAmount Float @default(0)
-  lateDays    Int    @default(0)
-  
-  payments    CooperativeDigitalLoanPayment[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_LOAN_PAYMENT
-// ============================================
-model CooperativeDigitalLoanPayment {
-  id          Int      @id @default(autoincrement())
-  loanId      Int
-  loan        CooperativeDigitalLoan @relation(fields: [loanId], references: [id])
-  
-  amount      Float
-  principal   Float
-  interest    Float
-  penalty     Float @default(0)
-  
-  paymentDate DateTime @default(now())
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-/// ============================================
-// MODEL COOPERATIVE_DIGITAL_TRANSACTION
-// ============================================
-model CooperativeDigitalTransaction {
-  id          Int      @id @default(autoincrement())
-  cooperativeId Int
-  cooperative  CooperativeDigital @relation(fields: [cooperativeId], references: [id])
-  
-  memberId    Int?
-  member      CooperativeDigitalMember? @relation("fromMember", fields: [memberId], references: [id])
-  
-  type        CooperativeDigitalTransactionType
-  amount      Float
-  description String?
-  
-  toMemberId  Int?
-  toMember    CooperativeDigitalMember? @relation("toMember", fields: [toMemberId], references: [id])
-  
-  status      String @default("COMPLETED")
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_MEETING
-// ============================================
-model CooperativeDigitalMeeting {
-  id          Int      @id @default(autoincrement())
-  cooperativeId Int
-  cooperative  CooperativeDigital @relation(fields: [cooperativeId], references: [id])
-  
-  title       String
-  description String?
-  date        DateTime
-  location    String?
-  onlineLink  String?
-  
-  hasVoting   Boolean @default(false)
-  votingResults Json?
-  
-  status      String @default("SCHEDULED")
-  
-  votes       CooperativeDigitalVote[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_VOTE
-// ============================================
-model CooperativeDigitalVote {
-  id          Int      @id @default(autoincrement())
-  meetingId   Int
-  meeting     CooperativeDigitalMeeting @relation(fields: [meetingId], references: [id])
-  
-  anggotaId   Int
-  anggota     CooperativeDigitalMember @relation(fields: [anggotaId], references: [id])
-  
-  choice      String   // YES, NO, ABSTAIN
-  comment     String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([meetingId, anggotaId])
-}
-
-// ============================================
-// MODEL COOPERATIVE_DIGITAL_ANNOUNCEMENT
-// ============================================
-model CooperativeDigitalAnnouncement {
-  id          Int      @id @default(autoincrement())
-  cooperativeId Int
-  cooperative  CooperativeDigital @relation(fields: [cooperativeId], references: [id])
-  
-  title       String
-  content     String
-  isUrgent    Boolean @default(false)
-  targetRole  String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// ENUM LAYANAN DESA
-// ============================================
 enum ComplaintStatus {
   PENDING
   PROCESSING
@@ -838,235 +1140,6 @@ enum DocumentStatus {
   REJECTED
 }
 
-// ============================================
-// MODEL VILLAGE_INFO
-// ============================================
-model VillageInfo {
-  id          Int      @id @default(autoincrement())
-  title       String
-  content     String
-  category    String
-  imageUrl    String?
-  isPinned    Boolean  @default(false)
-  isUrgent    Boolean  @default(false)
-  
-  authorId    Int
-  author      User     @relation(fields: [authorId], references: [id])
-  
-  views       Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COMPLAINT
-// ============================================
-model Complaint {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  category    String
-  location    String?
-  imageUrl    String?
-  
-  status      ComplaintStatus @default(PENDING)
-  
-  reporterId  Int
-  reporter    User     @relation("UserComplaints", fields: [reporterId], references: [id])
-  
-  assignedTo  Int?
-  assigned    User?    @relation("AssignedComplaints", fields: [assignedTo], references: [id])
-  
-  resolvedAt  DateTime?
-  resolution  String?
-  
-  responses   ComplaintResponse[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL COMPLAINT_RESPONSE
-// ============================================
-model ComplaintResponse {
-  id          Int      @id @default(autoincrement())
-  content     String
-  isOfficial  Boolean  @default(false)
-  
-  complaintId Int
-  complaint   Complaint @relation(fields: [complaintId], references: [id])
-  authorId    Int
-  author      User     @relation(fields: [authorId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_EVENT
-// ============================================
-model VillageEvent {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  location    String
-  startDate   DateTime
-  endDate     DateTime
-  
-  category    String
-  imageUrl    String?
-  
-  organizer   String
-  contact     String?
-  
-  isPublished Boolean  @default(true)
-  isFeatured  Boolean  @default(false)
-  
-  participants VillageEventParticipant[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt   // ← PERBAIKI: @updatedA → @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_EVENT_PARTICIPANT
-// ============================================
-model VillageEventParticipant {
-  id          Int      @id @default(autoincrement())
-  eventId     Int
-  event       VillageEvent @relation(fields: [eventId], references: [id])
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  
-  status      String   @default("CONFIRMED")
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([eventId, userId])
-}
-
-// ============================================
-// MODEL VILLAGE_DOCUMENT
-// ============================================
-model VillageDocument {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  type        DocumentType
-  fileUrl     String?
-  
-  requesterId Int
-  requester   User     @relation("DocumentRequester", fields: [requesterId], references: [id])
-  
-  officerId   Int?
-  officer     User?    @relation("DocumentOfficer", fields: [officerId], references: [id])
-  
-  status      DocumentStatus @default(PENDING)
-  notes       String?
-  
-  completedAt DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_POTENTIAL
-// ============================================
-model VillagePotential {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  category    String
-  location    String?
-  quantity    String?
-  imageUrl    String?
-  
-  isVerified  Boolean  @default(false)
-  verifiedAt  DateTime?
-  verifiedBy  Int?
-  
-  submittedBy Int
-  submitter   User     @relation(fields: [submittedBy], references: [id])
-  
-  views       Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL DONATION
-// ============================================
-model Donation {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  targetAmount Float
-  collectedAmount Float @default(0)
-  category    String
-  
-  organizerId Int
-  organizer   User     @relation(fields: [organizerId], references: [id])
-  
-  startDate   DateTime
-  endDate     DateTime
-  isActive    Boolean  @default(true)
-  
-  imageUrl    String?
-  
-  donors      DonationDonor[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL DONATION_DONOR
-// ============================================
-model DonationDonor {
-  id          Int      @id @default(autoincrement())
-  donationId  Int
-  donation    Donation @relation(fields: [donationId], references: [id])
-  donorId     Int
-  donor       User     @relation(fields: [donorId], references: [id])
-  
-  amount      Float
-  isAnonymous Boolean  @default(false)
-  
-  message     String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL DISASTER_INFO
-// ============================================
-model DisasterInfo {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  type        String
-  location    String
-  severity    String
-  
-  reportedBy  Int
-  reporter    User     @relation(fields: [reportedBy], references: [id])
-  
-  isActive    Boolean  @default(true)
-  
-  imageUrl    String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// ENUM ENTERPRISE
-// ============================================
 enum EnterpriseRole {
   OWNER
   ADMIN
@@ -1085,177 +1158,6 @@ enum BusinessType {
   LAINNYA
 }
 
-// ============================================
-// MODEL ENTERPRISE
-// ============================================
-model Enterprise {
-  id          Int      @id @default(autoincrement())
-  name        String
-  slug        String   @unique
-  description String?
-  type        BusinessType @default(UMKM)
-  logo        String?
-  banner      String?
-  address     String
-  phone       String
-  email       String
-  website     String?
-  
-  isVerified  Boolean  @default(false)
-  verifiedAt  DateTime?
-  verifiedBy  Int?
-  
-  status      String   @default("ACTIVE") // ACTIVE, SUSPENDED, INACTIVE
-  
-  ownerId     Int      @unique
-  owner       User     @relation(fields: [ownerId], references: [id])
-  
-  // Relasi
-  stores      EnterpriseStore[]
-  members     EnterpriseMember[]
-  products    EnterpriseProduct[]
-  orders      EnterpriseOrder[]
-  integrations EnterpriseIntegration[]
-  // TAMBAHKAN: Relasi ke EnterpriseAnalytic
-  analytics   EnterpriseAnalytic[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL ENTERPRISE_STORE (Toko dalam Enterprise)
-// ============================================
-model EnterpriseStore {
-  id          Int      @id @default(autoincrement())
-  enterpriseId Int
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
-  storeId     Int
-  store       Store    @relation(fields: [storeId], references: [id])
-  
-  name        String
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([enterpriseId, storeId])
-}
-
-// ============================================
-// MODEL ENTERPRISE_MEMBER (Anggota Enterprise)
-// ============================================
-model EnterpriseMember {
-  id          Int      @id @default(autoincrement())
-  enterpriseId Int
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  
-  role        EnterpriseRole @default(STAFF)
-  permissions Json?     // { canManageProducts: true, canManageOrders: true, ... }
-  
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([enterpriseId, userId])
-}
-
-// ============================================
-// MODEL ENTERPRISE_PRODUCT (Produk Enterprise)
-// ============================================
-model EnterpriseProduct {
-  id          Int      @id @default(autoincrement())
-  enterpriseId Int
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
-  productId   Int
-  product     Product  @relation(fields: [productId], references: [id])
-  
-  price       Float
-  stock       Int      @default(0)
-  isActive    Boolean  @default(true)
-  
-  // Marketing
-  featured    Boolean  @default(false)
-  weight      Float?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([enterpriseId, productId])
-}
-
-// ============================================
-// MODEL ENTERPRISE_ORDER (Pesanan Enterprise)
-// ============================================
-model EnterpriseOrder {
-  id          Int      @id @default(autoincrement())
-  enterpriseId Int
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
-  orderId     Int
-  order       Order    @relation(fields: [orderId], references: [id])
-  
-  status      String   @default("PENDING")
-  notes       String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([enterpriseId, orderId])
-}
-
-// ============================================
-// MODEL ENTERPRISE_INTEGRATION (Integrasi Marketplace)
-// ============================================
-model EnterpriseIntegration {
-  id          Int      @id @default(autoincrement())
-  enterpriseId Int
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
-  
-  platform    String   // SHOPEE, TOKOPEDIA, LAZADA, BUKALAPAK, INSTAGRAM
-  apiKey      String?
-  apiSecret   String?
-  accessToken String?
-  refreshToken String?
-  
-  isActive    Boolean  @default(true)
-  lastSync    DateTime?
-  
-  settings    Json?    // { shopId: '', webhookUrl: '', ... }
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL ENTERPRISE_ANALYTIC (Analitik Enterprise)
-// ============================================
-model EnterpriseAnalytic {
-  id          Int      @id @default(autoincrement())
-  enterpriseId Int
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
-  
-  date        DateTime
-  revenue     Float    @default(0)
-  orders      Int      @default(0)
-  products    Int      @default(0)
-  visitors    Int      @default(0)
-  conversion  Float    @default(0)
-  
-  // Detail
-  topProducts Json?    // { productId: '', sales: 0, revenue: 0 }
-  topStores   Json?    // { storeId: '', sales: 0, revenue: 0 }
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([enterpriseId, date])
-}
-// ============================================
-// ENUM PERTANIAN
-// ============================================
 enum CommodityCategory {
   PADI
   JAGUNG
@@ -1281,572 +1183,24 @@ enum HarvestStatus {
   SELESAI
 }
 
-// ============================================
-// MODEL FARM (Lahan Pertanian)
-// ============================================
-model Farm {
-  id          Int      @id @default(autoincrement())
-  name        String
-  location    String
-  area        Float
-  description String?
-  imageUrl    String?
-  
-  farmerId    Int
-  farmer      User     @relation(fields: [farmerId], references: [id])
-  
-  isActive    Boolean  @default(true)
-  
-  commodities FarmCommodity[]
-  harvests    Harvest[]
-  logistics   FarmLogistics[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+/// ============================================
+enum EscrowStatus {
+  HELD
+  RELEASED
+  CANCELLED
+  REFUNDED
 }
 
-// ============================================
-// MODEL FARM_COMMODITY (Komoditas Lahan)
-// ============================================
-model FarmCommodity {
-  id          Int      @id @default(autoincrement())
-  farmId      Int
-  farm        Farm     @relation(fields: [farmId], references: [id])
-  
-  commodity   String
-  category    CommodityCategory @default(SAYURAN)
-  variety     String?
-  
-  plantingDate DateTime
-  harvestEstimate DateTime
-  
-  areaPlanted Float
-  quantityEstimate Float
-  
-  harvests    Harvest[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL HARVEST (Hasil Panen)
-// ============================================
-model Harvest {
-  id          Int      @id @default(autoincrement())
-  farmId      Int
-  farm        Farm     @relation(fields: [farmId], references: [id])
-  commodityId Int
-  commodity   FarmCommodity @relation(fields: [commodityId], references: [id])
-  
-  quantity    Float
-  unit        String
-  
-  quality     CommodityQuality @default(STANDAR)
-  
-  harvestDate DateTime
-  expiryDate  DateTime?
-  
-  price       Float
-  imageUrl    String?
-  
-  status      HarvestStatus @default(PANEN)
-  
-  isAggregated Boolean @default(false)
-  aggregatedBy Int?
-  
-  logistics   FarmLogistics[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL MARKET_PRICE (Harga Pasaran)
-// ============================================
-model MarketPrice {
-  id          Int      @id @default(autoincrement())
-  commodity   String
-  category    CommodityCategory @default(SAYURAN)
-  
-  price       Float
-  unit        String
-  
-  market      String
-  quality     CommodityQuality @default(STANDAR)
-  
-  date        DateTime @default(now())
-  source      String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL SEASON_INFO (Informasi Musim)
-// ============================================
-model SeasonInfo {
-  id          Int      @id @default(autoincrement())
-  season      String   // HUJAN, KEMARAU, PERALIHAN
-  
-  year        Int
-  description String?
-  prediction  String?
-  
-  startDate   DateTime
-  endDate     DateTime
-  
-  recommendedCommodity String?
-  tips        String?
-  
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL FARM_ORDER (Pesanan Hasil Tani)
-// ============================================
-model FarmOrder {
-  id          Int      @id @default(autoincrement())
-  buyerId     Int
-  buyer       User     @relation(fields: [buyerId], references: [id])
-  
-  commodity   String
-  quantity    Float
-  unit        String
-  
-  targetPrice Float?
-  targetQuality CommodityQuality @default(STANDAR)
-  
-  harvestDate DateTime?
-  location    String?
-  
-  status      String   @default("OPEN")
-  
-  notes       String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL FARM_LOGISTICS (Logistik Panen)
-// ============================================
-model FarmLogistics {
-  id          Int      @id @default(autoincrement())
-  farmId      Int
-  farm        Farm     @relation(fields: [farmId], references: [id])
-  harvestId   Int
-  harvest     Harvest  @relation(fields: [harvestId], references: [id])
-  
-  destination String
-  distance    Float?
-  transport   String
-  
-  logisticsFee Float
-  deliveryDate DateTime
-  
-  status      String   @default("SCHEDULED")
-  
-  notes       String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// MODEL VILLAGE_ECONOMY (Data Ekonomi Desa)
-// ============================================
-model VillageEconomy {
-  id          Int      @id @default(autoincrement())
-  villageId   Int
-  village     Village  @relation(fields: [villageId], references: [id])
-  
-  // Data ekonomi
-  totalUMKM   Int      @default(0)
-  totalRevenue Float   @default(0)
-  totalTransactions Int @default(0)
-  
-  // Pertumbuhan
-  growthRate  Float    @default(0)
-  month       Int
-  year        Int
-  
-  // Top products
-  topProducts Json?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@unique([villageId, month, year])
-}
-
-// ============================================
-// MODEL VILLAGE (Data Desa)
-// ============================================
-model Village {
-  id          Int      @id @default(autoincrement())
-  name        String
-  district    String
-  regency     String
-  province    String
-  
-  latitude    Float?
-  longitude   Float?
-  
-  population  Int?
-  area        Float?
-  
-  // Relasi - One-to-Many (satu desa bisa punya banyak UMKM, produk, user)
-  umkm        UMKM[]
-  economy     VillageEconomy[]
-  users       User[]    // ← Tambahkan ini
-  products    Product[] // ← Tambahkan ini
-  
-  // Relasi ke VillageLogistics
-  pickupLogistics  VillageLogistics[] @relation("pickup")
-  deliveryLogistics VillageLogistics[] @relation("delivery")
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// MODEL LOCAL_REWARD (Penghargaan Belanja Lokal)
-// ============================================
-model LocalReward {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @unique  // ← TAMBAHKAN @unique untuk one-to-one
-  user        User     @relation(fields: [userId], references: [id])
-  
-  totalPoints Int      @default(0)
-  level       String   @default("PEMULA")
-  
-  localPurchases Int    @default(0)
-  totalPurchases Int   @default(0)
-  localPercentage Float @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// MODEL VILLAGE_LOGISTICS (Logistik Desa)
-// ============================================
-model VillageLogistics {
-  id          Int      @id @default(autoincrement())
-  orderId     Int      @unique  // ← TAMBAHKAN @unique untuk one-to-one
-  order       Order    @relation(fields: [orderId], references: [id])
-  
-  pickupVillageId Int
-  pickupVillage   Village @relation("pickup", fields: [pickupVillageId], references: [id])
-  deliveryVillageId Int
-  deliveryVillage Village @relation("delivery", fields: [deliveryVillageId], references: [id])
-  
-  courierId   Int?
-  courier     User?    @relation("courier", fields: [courierId], references: [id])
-  
-  distance    Float
-  cost        Float
-  estimatedTime String
-  
-  status      String   @default("PENDING")
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// MODEL NOTIFICATION (Notifikasi)
-// ============================================
-model Notification {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  
-  type        String   // NEW_ORDER, ORDER_STATUS, PROMOTION, SYSTEM
-  title       String
-  message     String
-  data        Json?    // Data tambahan { orderId, productId, etc }
-  
-  isRead      Boolean  @default(false)
-  readAt      DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([userId])
-  @@index([isRead])
-}
-// ============================================
-// MODEL PAYMENT_METHOD (Metode Pembayaran)
-// ============================================
-model PaymentMethod {
-  id          Int      @id @default(autoincrement())
-  name        String   // BANK_TRANSFER, QRIS, COD
-  code        String   @unique // bank_transfer, qris, cod
-  description String?
-  icon        String?
-  isActive    Boolean  @default(true)
-  isOnline    Boolean  @default(true) // true = online, false = offline (COD)
-  fee         Float    @default(0)
-  minAmount   Float    @default(0)
-  maxAmount   Float    @default(999999999)
-  
-  // Untuk Bank Transfer
-  bankAccounts BankAccount[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL BANK_ACCOUNT (Rekening Bank)
-// ============================================
-model BankAccount {
-  id          Int      @id @default(autoincrement())
-  paymentMethodId Int
-  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
-  
-  bankName    String
-  accountNumber String @unique  // ← TAMBAHKAN @unique
-  accountHolder String
-  branch      String?
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// MODEL VILLAGE_EBOOK (Ebook Desa)
-// ============================================
-model VillageEbook {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  author      String
-  price       Float    @default(0)
-  fileUrl     String   // URL file ebook
-  coverUrl    String?
-  category    String   // PANDUAN, RESEP, KERAJINAN, PERTANIAN
-  downloads   Int      @default(0)
-  isActive    Boolean  @default(true)
-  
-  uploadedBy  Int
-  uploader    User     @relation(fields: [uploadedBy], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL PPOB (Payment Point Online Bank)
-// ============================================
-model PPOB {
-  id          Int      @id @default(autoincrement())
-  type        String   // LISTRIK, AIR, TELPON, INTERNET, BPJS, PBB
-  provider    String   // PLN, PDAM, TELKOM, dll
-  customerId  String
-  customerName String
-  amount      Float
-  adminFee    Float    @default(0)
-  status      String   @default("PENDING") // PENDING, PAID, FAILED
-  
-  paidBy      Int
-  payer       User     @relation(fields: [paidBy], references: [id])
-  paidAt      DateTime?
-  
-  invoiceNumber String  @unique
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_COURIER (Kurir Desa)
-// ============================================
-model VillageCourier {
-  id          Int      @id @default(autoincrement())
-  name        String
-  phone       String
-  vehicleType String   // ← Ganti vehicle → vehicleType
-  village     String   // ← Ganti area → village
-  pricePerKm  Float    // ← Ganti fee → pricePerKm
-  isActive    Boolean  @default(true)
-  isVerified  Boolean  @default(false)  // ← Tambahkan
-  available   Boolean  @default(true)   // ← Tambahkan
-  rating      Float    @default(0)
-  totalDeliveries Int  @default(0)      // ← Tambahkan
-  
-  orders      VillageCourierOrder[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("village_couriers")
-}
-
-// ============================================
-// MODEL VILLAGE_COURIER_ORDER (Pesanan Kurir)
-// ============================================
-model VillageCourierOrder {
-  id          Int      @id @default(autoincrement())
-  courierId   Int
-  courier     VillageCourier @relation(fields: [courierId], references: [id])
-  
-  senderId    Int
-  sender      User     @relation("sender", fields: [senderId], references: [id])
-  receiverId  Int
-  receiver    User     @relation("receiver", fields: [receiverId], references: [id])
-  
-  pickupAddress String
-  deliveryAddress String
-  description String?
-  weight      Float
-  fee         Float
-  status      String   @default("PENDING") // PENDING, PICKED, IN_TRANSIT, DELIVERED
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_JOB (Lowongan Kerja)
-// ============================================
-model VillageJob {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  company     String
-  location    String
-  type        String   // FULLTIME, PARTTIME, FREELANCE, MAGANG
-  salary      String?
-  requirements String?
-  contact     String
-  
-  postedBy    Int
-  poster      User     @relation(fields: [postedBy], references: [id])
-  
-  isActive    Boolean  @default(true)
-  deadline    DateTime?
-  
-  applications VillageJobApplication[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_JOB_APPLICATION (Lamaran Kerja)
-// ============================================
-model VillageJobApplication {
-  id          Int      @id @default(autoincrement())
-  jobId       Int
-  job         VillageJob @relation(fields: [jobId], references: [id])
-  applicantId Int
-  applicant   User     @relation(fields: [applicantId], references: [id])
-  
-  message     String?
-  cvUrl       String?
-  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_LIVE_SHOPPING (Live Shopping)
-// ============================================
-model VillageLiveShopping {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  streamUrl   String
-  thumbnail   String?
-  
-  hostId      Int
-  host        User     @relation(fields: [hostId], references: [id])
-  
-  startTime   DateTime
-  endTime     DateTime
-  isActive    Boolean  @default(true)
-  
-  products    VillageLiveProduct[]
-  viewers     Int      @default(0)
-  likes       Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL VILLAGE_LIVE_PRODUCT (Produk Live Shopping)
-// ============================================
-model VillageLiveProduct {
-  id          Int      @id @default(autoincrement())
-  liveId      Int
-  live        VillageLiveShopping @relation(fields: [liveId], references: [id])
-  productId   Int
-  product     Product  @relation(fields: [productId], references: [id])
-  
-  price       Float
-  stock       Int      @default(0)
-  discount    Float    @default(0)
-  
-  sold        Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-// ============================================
-// MODEL DESA_ADMIN_PRODUCT (Produk Administrasi Desa)
-// ============================================
-model DesaAdminProduct {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  type        String   // TEMPLATE_SURAT, FORMAT_APBDES, EBOOK_ADMIN, JASA_DOKUMEN, KURSUS_ONLINE
-  price       Float    @default(0)
-  
-  fileUrl     String?
-  imageUrl    String?
-  category    String
-  sample      String?
-  
-  duration    String?
-  level       String?
-  
-  serviceTime String?
-  includes    String?
-  
-  isActive    Boolean  @default(true)
-  sold        Int      @default(0)
-  rating      Float    @default(0)
-  
-  uploadedBy  Int
-  uploader    User     @relation(fields: [uploadedBy], references: [id])
-  
-  // TAMBAHKAN: Relasi ke Order
-  orders      DesaAdminOrder[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// MODEL DESA_ADMIN_ORDER (Pesanan Administrasi Desa)
-// ============================================
-model DesaAdminOrder {
-  id          Int      @id @default(autoincrement())
-  productId   Int
-  product     DesaAdminProduct @relation(fields: [productId], references: [id])
-  buyerId     Int
-  buyer       User     @relation(fields: [buyerId], references: [id])
-  
-  amount      Float
-  status      String   @default("PENDING")
-  
-  notes       String?
-  deadline    DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  WAITING_PAYMENT
+  PAYMENT_VERIFIED
+  READY_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  REFUNDED
 }

@@ -1,5 +1,8 @@
 {
-  "env": {
-    "REACT_APP_API_URL": "https://830f-182-10-131-61.ngrok-free.app/api"
-  }
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://73e9-182-10-130-155.ngrok-free.app/api/$1"
+    }
+  ]
 }

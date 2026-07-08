@@ -1,8 +1,10 @@
-// backend/server.js atau backend/src/index.js
+// backend/src/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
+
+// Import routes
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const sellerRoutes = require('./routes/sellerRoutes');
@@ -22,7 +24,14 @@ const enterpriseRoutes = require('./routes/enterpriseRoutes');
 const agricultureRoutes = require('./routes/agricultureRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+
+// ✅ PERBAIKI INI - NOTIFICATION ROUTES
+// Jika notificationRoutes.js export router langsung:
 const notificationRoutes = require('./routes/notificationRoutes');
+
+// Jika notificationRoutes.js export { router, createNotification }:
+// const { router: notificationRoutes } = require('./routes/notificationRoutes');
+
 const villageServicesRoutes = require('./routes/villageServicesRoutes');
 const desaAdminRoutes = require('./routes/desaAdminRoutes');
 const courierRoutes = require('./routes/courierRoutes');
@@ -31,7 +40,7 @@ const app = express();
 const prisma = new PrismaClient();
 
 // ============================================
-// ✅ CORS - KONFIGURASI LENGKAP
+// CORS CONFIGURATION
 // ============================================
 const allowedOrigins = [
   'http://localhost:3000',
@@ -41,9 +50,8 @@ const allowedOrigins = [
   'https://desamart.vercel.app',
   'https://desamart-o7en5iflv-desamart.vercel.app',
   'https://desamart-h3a5lfidx-desamart.vercel.app',
-  'https://73e9-182-10-130-155.ngrok-free.app', // ← URL NGROK BARU
+  'https://73e9-182-10-130-155.ngrok-free.app',
   'https://3a2e-182-10-131-61.ngrok-free.app',
-  // Tambahkan semua subdomain ngrok
   /\.ngrok-free\.app$/,
   /\.vercel\.app$/,
   /\.localhost\.vercel\.app$/
@@ -59,13 +67,11 @@ app.use((req, res, next) => {
 // CORS Configuration
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       console.log('✅ No origin, allowing');
       return callback(null, true);
     }
     
-    // Check if origin is allowed
     const isAllowed = allowedOrigins.some(o => {
       if (o instanceof RegExp) {
         return o.test(origin);
@@ -113,7 +119,7 @@ app.options('*', (req, res) => {
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+      res.setHeader('Access-Control-Max-Age', '86400');
     }
   }
   res.sendStatus(204);
@@ -124,7 +130,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ============================================
-// 🚀 ROUTES
+// ROUTES
 // ============================================
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -144,17 +150,16 @@ app.use('/api/enterprise', enterpriseRoutes);
 app.use('/api/agriculture', agricultureRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/notifications', notificationRoutes); // ← PASTIKAN INI
 app.use('/api/village-services', villageServicesRoutes);
 app.use('/api/desa-admin', desaAdminRoutes);
 app.use('/api/couriers', courierRoutes);
 
 // ============================================
-// ✅ HEALTH CHECK - DENGAN INFO LENGKAP
+// HEALTH CHECK
 // ============================================
 app.get('/api/health', async (req, res) => {
   try {
-    // Test database connection
     await prisma.$queryRaw`SELECT 1`;
     
     res.json({
@@ -178,7 +183,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============================================
-// ✅ 404 HANDLER
+// 404 HANDLER
 // ============================================
 app.use((req, res) => {
   res.status(404).json({
@@ -189,12 +194,12 @@ app.use((req, res) => {
 });
 
 // ============================================
-// ✅ ERROR HANDLER
+// ERROR HANDLER
 // ============================================
 app.use(errorHandler);
 
 // ============================================
-// ✅ START SERVER
+// START SERVER
 // ============================================
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, '0.0.0.0', () => {
@@ -206,32 +211,20 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ CORS enabled for ${allowedOrigins.length} origins`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('='.repeat(60));
-  console.log('📋 Routes:');
-console.log('  /api/couriers/couriers - GET - Daftar kurir');
-console.log('  /api/couriers/couriers/:id - GET - Detail kurir');
-console.log('  /api/couriers/calculate-cost - POST - Hitung biaya');
-console.log('  /api/couriers/deliveries - POST - Buat pengiriman');
-console.log('  /api/couriers/deliveries/:id/status - PUT - Update status');
-console.log('  /api/couriers/deliveries/order/:orderId - GET - Detail delivery');
-console.log('  /api/couriers/my-deliveries - GET - Daftar delivery user');
-console.log('  /api/couriers/admin/couriers - POST - Tambah kurir (admin)');
-console.log('  /api/couriers/admin/couriers/:id - PUT - Update kurir (admin)');
-console.log('  /api/couriers/admin/couriers/:id - DELETE - Hapus kurir (admin)');
   
-  // Log allowed origins
-  console.log('\n📋 Allowed Origins:');
-  allowedOrigins.forEach((origin, i) => {
-    if (origin instanceof RegExp) {
-      console.log(`  ${i + 1}. ${origin.source} (regex)`);
-    } else {
-      console.log(`  ${i + 1}. ${origin}`);
-    }
-  });
+  console.log('\n📋 Routes:');
+  console.log('  /api/health - GET - Health check');
+  console.log('  /api/auth - Auth routes');
+  console.log('  /api/products - Product routes');
+  console.log('  /api/orders - Order routes');
+  console.log('  /api/payments - Payment routes');
+  console.log('  /api/notifications - Notification routes');
+  console.log('  /api/couriers - Courier routes');
   console.log('='.repeat(60));
 });
 
 // ============================================
-// ✅ GRACEFUL SHUTDOWN
+// GRACEFUL SHUTDOWN
 // ============================================
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, closing server...');

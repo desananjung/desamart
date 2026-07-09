@@ -2,12 +2,93 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
+const prisma = new PrismaClient();
+
 // ============================================
-// SEED PAYMENT METHODS & BANK ACCOUNTS
+// SEED CATEGORIES
 // ============================================
-async function seedPayments(prisma) {
+async function seedCategories() {
+  console.log('📂 Creating categories...');
+  const categories = [
+    'Makanan & Minuman',
+    'Fashion',
+    'Elektronik',
+    'Kerajinan',
+    'Pertanian',
+    'Kesehatan & Kecantikan',
+    'Peralatan Rumah Tangga',
+    'Otomotif',
+    'Lainnya'
+  ];
+
+  for (const name of categories) {
+    await prisma.category.upsert({
+      where: { name },
+      update: {},
+      create: {
+        name,
+        slug: name.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')
+      }
+    });
+  }
+  console.log(`✅ ${categories.length} categories created`);
+}
+
+// ============================================
+// SEED USERS
+// ============================================
+async function seedUsers() {
+  console.log('👑 Creating users...');
+
+  // Admin
+  const adminPassword = await bcrypt.hash('admin123', 10);
+  await prisma.user.upsert({
+    where: { email: 'admin@desamart.com' },
+    update: {},
+    create: {
+      name: 'Admin Desa',
+      email: 'admin@desamart.com',
+      password: adminPassword,
+      role: 'ADMIN'
+    }
+  });
+  console.log('✅ Admin created');
+
+  // Seller
+  const sellerPassword = await bcrypt.hash('seller123', 10);
+  await prisma.user.upsert({
+    where: { email: 'seller@desamart.com' },
+    update: {},
+    create: {
+      name: 'Toko Makmur',
+      email: 'seller@desamart.com',
+      password: sellerPassword,
+      role: 'SELLER'
+    }
+  });
+  console.log('✅ Seller created');
+
+  // Buyer
+  const buyerPassword = await bcrypt.hash('buyer123', 10);
+  await prisma.user.upsert({
+    where: { email: 'buyer@desamart.com' },
+    update: {},
+    create: {
+      name: 'Budi Pembeli',
+      email: 'buyer@desamart.com',
+      password: buyerPassword,
+      role: 'BUYER'
+    }
+  });
+  console.log('✅ Buyer created');
+}
+
+// ============================================
+// SEED PAYMENT METHODS
+// ============================================
+async function seedPayments() {
   console.log('💳 Creating payment methods...');
-  
+
   const methods = [
     { name: 'BANK_TRANSFER', code: 'bank_transfer', description: 'Transfer Bank', isOnline: true, fee: 0 },
     { name: 'QRIS', code: 'qris', description: 'QR Code Payment', isOnline: true, fee: 0 },
@@ -51,7 +132,7 @@ async function seedPayments(prisma) {
 // ============================================
 // SEED VILLAGE COURIERS
 // ============================================
-async function seedCouriers(prisma) {
+async function seedCouriers() {
   console.log('🚚 Creating village couriers...');
 
   const couriers = [
@@ -94,7 +175,6 @@ async function seedCouriers(prisma) {
   ];
 
   for (const courier of couriers) {
-    // ✅ Gunakan prisma yang diterima sebagai parameter
     const existing = await prisma.villageCourier.findFirst({
       where: { phone: courier.phone }
     });
@@ -117,116 +197,41 @@ async function seedCouriers(prisma) {
 }
 
 // ============================================
-// SEED CATEGORIES
+// UPDATE PRODUCT SELLER (Opsional)
 // ============================================
-async function seedCategories(prisma) {
-  console.log('📂 Creating categories...');
-  const categories = [
-    'Makanan & Minuman',
-    'Fashion',
-    'Elektronik',
-    'Kerajinan',
-    'Pertanian',
-    'Kesehatan & Kecantikan',
-    'Peralatan Rumah Tangga',
-    'Otomotif',
-    'Lainnya'
-  ];
-
-  for (const name of categories) {
-    await prisma.category.upsert({
-      where: { name },
-      update: {},
-      create: {
-        name,
-        slug: name.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')
-      }
-    });
-  }
-  console.log(`✅ ${categories.length} categories created`);
-}
-
 async function updateProductSeller() {
-  // Update product dengan sellerId yang benar
-  const product = await prisma.product.findFirst({
-    where: { name: 'kue' } // atau nama product lainnya
-  });
-  
-  if (product) {
-    await prisma.product.update({
-      where: { id: product.id },
-      data: { sellerId: 2 }
+  try {
+    const product = await prisma.product.findFirst({
+      where: { name: 'kue' }
     });
-    console.log('✅ Product sellerId updated to 2');
+
+    if (product) {
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { sellerId: 2 }
+      });
+      console.log('✅ Product sellerId updated to 2');
+    } else {
+      console.log('ℹ️ No product found to update');
+    }
+  } catch (error) {
+    console.log('ℹ️ Update product seller skipped:', error.message);
   }
 }
 
-// Panggil fungsi
-updateProductSeller();
 // ============================================
-// MAIN FUNCTION
+// MAIN
 // ============================================
 async function main() {
-  // ✅ Inisialisasi Prisma di dalam main
-  const prisma = new PrismaClient();
-  
   console.log('🌱 Starting seeding...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   try {
-    // 1. Buat akun admin
-    console.log('👑 Creating admin...');
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    await prisma.user.upsert({
-      where: { email: 'admin@desamart.com' },
-      update: {},
-      create: {
-        name: 'Admin Desa',
-        email: 'admin@desamart.com',
-        password: adminPassword,
-        role: 'ADMIN'
-      }
-    });
-    console.log('✅ Admin created');
-
-    // 2. Buat akun seller
-    console.log('🏪 Creating seller...');
-    const sellerPassword = await bcrypt.hash('seller123', 10);
-    await prisma.user.upsert({
-      where: { email: 'seller@desamart.com' },
-      update: {},
-      create: {
-        name: 'Toko Makmur',
-        email: 'seller@desamart.com',
-        password: sellerPassword,
-        role: 'SELLER'
-      }
-    });
-    console.log('✅ Seller created');
-
-    // 3. Buat akun buyer
-    console.log('🛒 Creating buyer...');
-    const buyerPassword = await bcrypt.hash('buyer123', 10);
-    await prisma.user.upsert({
-      where: { email: 'buyer@desamart.com' },
-      update: {},
-      create: {
-        name: 'Budi Pembeli',
-        email: 'buyer@desamart.com',
-        password: buyerPassword,
-        role: 'BUYER'
-      }
-    });
-    console.log('✅ Buyer created');
-
-    // 4. Buat kategori
-    await seedCategories(prisma);
-
-    // 5. Seed Payment Methods & Bank Accounts
-    await seedPayments(prisma);
-
-    // 6. Seed Village Couriers
-    await seedCouriers(prisma);
+    await seedUsers();
+    await seedCategories();
+    await seedPayments();
+    await seedCouriers();
+    await updateProductSeller();
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('\n🎉 Seeding completed successfully!');
@@ -244,10 +249,16 @@ async function main() {
     console.log('   📧 buyer@desamart.com');
     console.log('   🔑 buyer123');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('\n🚚 KURIR DESA:');
-    console.log('   ✅ Pak Ahmad (Motor) - Rp5.000/km');
-    console.log('   ✅ Bu Siti (Mobil) - Rp8.000/km');
-    console.log('   ✅ Mas Budi (Sepeda) - Rp3.000/km');
+    console.log('\n📂 Categories:');
+    console.log('   ✅ Makanan & Minuman');
+    console.log('   ✅ Fashion');
+    console.log('   ✅ Elektronik');
+    console.log('   ✅ Kerajinan');
+    console.log('   ✅ Pertanian');
+    console.log('   ✅ Kesehatan & Kecantikan');
+    console.log('   ✅ Peralatan Rumah Tangga');
+    console.log('   ✅ Otomotif');
+    console.log('   ✅ Lainnya');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   } catch (error) {

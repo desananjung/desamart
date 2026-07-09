@@ -1,242 +1,133 @@
 // frontend/src/pages/Login.jsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const Login = () => {
-  const { login, loading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Ambil redirect dari state
+  const from = location.state?.from?.pathname || '/marketplace';
 
-  // Dapatkan redirect URL dari state
-  const from = location.state?.from || '/dashboard';
-  const action = location.state?.action || '';
-
-  // Auto-fill demo akun (opsional)
-  useEffect(() => {
-    // Isi dengan buyer untuk kemudahan testing
-    // setForm({ email: 'buyer@desamart.com', password: 'buyer123' });
-  }, []);
-
-  // ============================================
-  // HANDLE SUBMIT
-  // ============================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setIsSubmitting(true);
-
-    // Validasi client-side
-    if (!form.email || !form.password) {
-      setError('Email dan password wajib diisi');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!form.email.includes('@')) {
-      setError('Format email tidak valid');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (form.password.length < 6) {
-      setError('Password minimal 6 karakter');
-      setIsSubmitting(false);
-      return;
-    }
-
-    console.log('📤 Login attempt:', { email: form.email });
+    setLoading(true);
 
     try {
-      const result = await login(form.email, form.password);
-      
-      console.log('📥 Login result:', result);
+      const result = await login(email, password, from);
       
       if (result.success) {
-        // Redirect ke halaman yang dimaksud
-        if (action === 'register-umkm' || from === '/umkm/register') {
-          navigate('/umkm/register');
-        } else {
-          navigate(from);
-        }
+        // Redirect sudah dihandle oleh AuthContext
+        console.log('✅ Login success, redirecting to:', from);
       } else {
-        setError(result.message || 'Login gagal. Periksa email dan password Anda.');
+        setError(result.message || 'Login gagal');
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Terjadi kesalahan. Silakan coba lagi.');
+      setError(err.message || 'Terjadi kesalahan');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // ============================================
-  // AUTO-FILL DEMO (Klik tombol)
-  // ============================================
-  const fillDemoAccount = (role) => {
-    const accounts = {
-      admin: { email: 'admin@desamart.com', password: 'admin123' },
-      seller: { email: 'seller@desamart.com', password: 'seller123' },
-      buyer: { email: 'buyer@desamart.com', password: 'buyer123' }
-    };
-    setForm(accounts[role] || accounts.buyer);
-    setError('');
-  };
-
-  // ============================================
-  // RENDER
-  // ============================================
-  const isDisabled = isSubmitting || loading;
-
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 max-w-md w-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-3xl">🔐</span>
-            </div>
-          </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-primary">Login</h2>
-          <p className="text-gray-500 mt-2 text-sm">
-            {action === 'register-umkm' 
-              ? 'Login untuk mendaftarkan UMKM Anda'
-              : 'Selamat datang kembali di DesaMart'}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Masuk ke DesaMart
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Atau{' '}
+            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+              daftar akun baru
+            </Link>
           </p>
         </div>
-        
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <div className="relative">
-              <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="email"
-                placeholder="Masukkan email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-                className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                disabled={isDisabled}
-              />
-            </div>
-          </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <div className="relative">
-              <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Masukkan password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-                className="w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                disabled={isDisabled}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="w-5 h-5" />
-                ) : (
-                  <EyeIcon className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Forgot Password */}
-          <div className="text-right">
-            <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-              Lupa password?
-            </Link>
-          </div>
-
-          {/* Error */}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
               {error}
             </div>
           )}
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={isDisabled}
-            className="btn-primary w-full py-3 text-lg rounded-lg flex items-center justify-center gap-2"
-          >
-            {isDisabled ? (
-              <>
-                <span className="animate-spin">⟳</span>
-                Memproses...
-              </>
-            ) : (
-              'Login'
-            )}
-          </button>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Email"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Memproses...' : 'Masuk'}
+            </button>
+          </div>
+
+          {/* Demo Accounts */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-xs text-gray-500 text-center">Akun Demo:</p>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => { setEmail('admin@desamart.com'); setPassword('admin123'); }}
+                className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+              >
+                Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmail('seller@desamart.com'); setPassword('seller123'); }}
+                className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
+              >
+                Seller
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmail('buyer@desamart.com'); setPassword('buyer123'); }}
+                className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200"
+              >
+                Buyer
+              </button>
+            </div>
+          </div>
         </form>
-
-        {/* Register Link */}
-        <p className="text-center mt-6 text-gray-600 text-sm">
-          Belum punya akun?{' '}
-          <Link to="/register" className="text-primary font-semibold hover:underline">
-            Daftar
-          </Link>
-        </p>
-
-        {/* Demo Account */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-          <p className="text-sm text-gray-600 font-medium mb-2">💡 Akun Demo</p>
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center justify-between">
-              <span>👑 Admin</span>
-              <button
-                onClick={() => fillDemoAccount('admin')}
-                className="text-xs text-primary hover:underline font-medium"
-              >
-                Isi Otomatis
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>🏪 Seller</span>
-              <button
-                onClick={() => fillDemoAccount('seller')}
-                className="text-xs text-primary hover:underline font-medium"
-              >
-                Isi Otomatis
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>🛒 Buyer</span>
-              <button
-                onClick={() => fillDemoAccount('buyer')}
-                className="text-xs text-primary hover:underline font-medium"
-              >
-                Isi Otomatis
-              </button>
-            </div>
-          </div>
-          <div className="mt-2 text-xs text-gray-400">
-            <p>Email: buyer@desamart.com / Password: buyer123</p>
-          </div>
-        </div>
       </div>
     </div>
   );

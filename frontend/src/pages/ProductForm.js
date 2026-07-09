@@ -4,14 +4,59 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Konversi URL relative ke absolute
+ */
+const getFullImageUrl = (imageUrl) => {
+  if (!imageUrl) return null;
+  
+  // Jika sudah absolute URL (http atau https)
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Jika relative URL (dimulai dengan /)
+  if (imageUrl.startsWith('/')) {
+    const baseURL = api.defaults.baseURL || 'https://73e9-182-10-130-155.ngrok-free.app/api';
+    const baseWithoutApi = baseURL.replace('/api', '');
+    return baseWithoutApi + imageUrl;
+  }
+  
+  // Jika masih local path (file:// atau C:)
+  if (imageUrl.startsWith('file://') || imageUrl.startsWith('C:')) {
+    return null;
+  }
+  
+  return imageUrl;
+};
+
+/**
+ * Dapatkan URL gambar untuk ditampilkan (dengan fallback)
+ */
+const getDisplayImageUrl = (imageUrl) => {
+  const fullUrl = getFullImageUrl(imageUrl);
+  return fullUrl || 'https://via.placeholder.com/300x300?text=No+Image';
+};
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
 const ProductForm = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  
+  // State
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -24,6 +69,10 @@ const ProductForm = () => {
     imageUrl: ''
   });
 
+  // ============================================
+  // EFFECTS
+  // ============================================
+
   useEffect(() => {
     fetchCategories();
     if (id) {
@@ -31,16 +80,72 @@ const ProductForm = () => {
     }
   }, [id]);
 
+  // ============================================
+  // FETCH CATEGORIES
+  // ============================================
+
   const fetchCategories = async () => {
+    setLoadingCategories(true);
     try {
+      console.log('📂 Fetching categories...');
       const response = await api.get('/categories');
-      if (response.data.success) {
-        setCategories(response.data.data || []);
+      console.log('📥 Categories response:', response.data);
+      
+      let categoriesData = [];
+      
+      if (response.data) {
+        // Format 1: { success: true, data: [...] }
+        if (response.data.success === true && Array.isArray(response.data.data)) {
+          categoriesData = response.data.data;
+          console.log('✅ Format 1 (success: true):', categoriesData.length);
+        }
+        // Format 2: { status: 'success', data: [...] }
+        else if (response.data.status === 'success' && Array.isArray(response.data.data)) {
+          categoriesData = response.data.data;
+          console.log('✅ Format 2 (status: success):', categoriesData.length);
+        }
+        // Format 3: langsung array
+        else if (Array.isArray(response.data)) {
+          categoriesData = response.data;
+          console.log('✅ Format 3 (array):', categoriesData.length);
+        }
+        // Format 4: { data: [...] } tanpa success/status
+        else if (Array.isArray(response.data.data)) {
+          categoriesData = response.data.data;
+          console.log('✅ Format 4 (data only):', categoriesData.length);
+        }
+      }
+      
+      if (categoriesData.length > 0) {
+        setCategories(categoriesData);
+        console.log('✅ Categories loaded:', categoriesData.length);
+      } else {
+        console.warn('⚠️ No categories found, using fallback');
+        setCategories(getFallbackCategories());
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('❌ Error fetching categories:', error);
+      setCategories(getFallbackCategories());
+    } finally {
+      setLoadingCategories(false);
     }
   };
+
+  const getFallbackCategories = () => [
+    { id: 1, name: 'Makanan & Minuman' },
+    { id: 2, name: 'Fashion' },
+    { id: 3, name: 'Elektronik' },
+    { id: 4, name: 'Kerajinan' },
+    { id: 5, name: 'Pertanian' },
+    { id: 6, name: 'Kesehatan & Kecantikan' },
+    { id: 7, name: 'Peralatan Rumah Tangga' },
+    { id: 8, name: 'Otomotif' },
+    { id: 9, name: 'Lainnya' }
+  ];
+
+  // ============================================
+  // FETCH PRODUCT (untuk edit)
+  // ============================================
 
   const fetchProduct = async () => {
     try {
@@ -56,17 +161,20 @@ const ProductForm = () => {
           imageUrl: product.imageUrl || ''
         });
         if (product.imageUrl) {
-          setImagePreview(product.imageUrl);
+          const fullUrl = getFullImageUrl(product.imageUrl);
+          setImagePreview(fullUrl || '');
         }
       }
     } catch (error) {
-      console.error('Error fetching product:', error);
+      console.error('❌ Error fetching product:', error);
+      alert('Gagal mengambil data produk');
     }
   };
 
   // ============================================
-  // HANDLE IMAGE UPLOAD
+  // IMAGE HANDLING
   // ============================================
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -81,7 +189,7 @@ const ProductForm = () => {
       return;
     }
 
-    // Validasi tipe
+    // Validasi tipe file
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       alert('Format gambar tidak didukung. Gunakan JPG, PNG, GIF, atau WEBP');
@@ -96,9 +204,6 @@ const ProductForm = () => {
     reader.readAsDataURL(file);
   };
 
-  // ============================================
-  // DRAG & DROP HANDLERS
-  // ============================================
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -119,33 +224,6 @@ const ProductForm = () => {
     }
   };
 
-  const uploadImage = async () => {
-    if (!imageFile) return null;
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('image', imageFile);
-
-    try {
-      const response = await api.post('/upload/product', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      if (response.data.success) {
-        return response.data.data.imageUrl;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Gagal upload gambar. Silakan coba lagi.');
-      return null;
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const removeImage = () => {
     setImagePreview('');
     setImageFile(null);
@@ -156,35 +234,163 @@ const ProductForm = () => {
   };
 
   // ============================================
+// UPLOAD IMAGE - VERSI FINAL
+// ============================================
+const uploadImage = async () => {
+  if (!imageFile) return null;
+
+  setUploading(true);
+  const formData = new FormData();
+  formData.append('image', imageFile);
+
+  try {
+    console.log('📤 Uploading image:', imageFile.name);
+    
+    const response = await api.post('/upload/product', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    console.log('📥 Upload Response:', response.data);
+
+    // ============================================
+    // HANDLE RESPONSE - SUPPORT MULTIPLE FORMATS
+    // ============================================
+    let imageUrl = null;
+    
+    // Format 1: { success: true, data: { imageUrl: '...' } }
+    if (response.data.success && response.data.data?.imageUrl) {
+      imageUrl = response.data.data.imageUrl;
+      console.log('✅ Format 1 (success.data.imageUrl):', imageUrl);
+    }
+    // Format 2: { success: true, imageUrl: '...' }
+    else if (response.data.success && response.data.imageUrl) {
+      imageUrl = response.data.imageUrl;
+      console.log('✅ Format 2 (success.imageUrl):', imageUrl);
+    }
+    // Format 3: { imageUrl: '...' }
+    else if (response.data.imageUrl) {
+      imageUrl = response.data.imageUrl;
+      console.log('✅ Format 3 (imageUrl):', imageUrl);
+    }
+    // Format 4: { data: { imageUrl: '...' } }
+    else if (response.data.data?.imageUrl) {
+      imageUrl = response.data.data.imageUrl;
+      console.log('✅ Format 4 (data.imageUrl):', imageUrl);
+    }
+    // Format 5: { url: '...' }
+    else if (response.data.url) {
+      imageUrl = response.data.url;
+      console.log('✅ Format 5 (url):', imageUrl);
+    }
+    // Format 6: langsung string
+    else if (typeof response.data === 'string') {
+      imageUrl = response.data;
+      console.log('✅ Format 6 (string):', imageUrl);
+    }
+    // Format 7: data langsung string
+    else if (typeof response.data.data === 'string') {
+      imageUrl = response.data.data;
+      console.log('✅ Format 7 (data string):', imageUrl);
+    }
+    else {
+      // Coba ekstrak URL dari response
+      console.warn('⚠️ Unknown response format:', response.data);
+      const stringified = JSON.stringify(response.data);
+      const urlMatch = stringified.match(/\/uploads\/[^\s"']+/);
+      if (urlMatch) {
+        imageUrl = urlMatch[0];
+        console.log('✅ Extracted URL from response:', imageUrl);
+      }
+    }
+
+    // ============================================
+    // ✅ VALIDASI URL
+    // ============================================
+    if (imageUrl) {
+      // Jika URL masih path lokal (C: atau file://)
+      if (imageUrl.startsWith('C:') || 
+          imageUrl.startsWith('file://') || 
+          imageUrl.includes('Downloads') ||
+          imageUrl.includes('Users')) {
+        console.warn('⚠️ Local path detected, ignoring:', imageUrl);
+        return null;
+      }
+      
+      // Pastikan URL dimulai dengan /
+      if (!imageUrl.startsWith('/') && !imageUrl.startsWith('http')) {
+        imageUrl = '/' + imageUrl;
+      }
+      
+      console.log('✅ Final image URL:', imageUrl);
+      return imageUrl;
+    } else {
+      console.error('❌ Failed to extract image URL');
+      toast.error('Gagal upload gambar: Format response tidak dikenali');
+      return null;
+    }
+    
+  } catch (error) {
+    console.error('❌ Upload error:', error);
+    console.error('❌ Response:', error.response?.data);
+    
+    if (error.response?.status === 413) {
+      toast.error('Ukuran file terlalu besar (maks 5MB)');
+    } else {
+      toast.error(error.response?.data?.message || 'Gagal upload gambar');
+    }
+    return null;
+  } finally {
+    setUploading(false);
+  }
+};
+
+  // ============================================
   // SUBMIT FORM
   // ============================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      console.log('📦 Menyimpan produk...');
+      
       let imageUrl = form.imageUrl;
 
-      // Upload image if new file selected
+      // Upload gambar jika ada file baru
       if (imageFile) {
+        console.log('📤 Mengupload gambar...');
         const uploadedUrl = await uploadImage();
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
+          console.log('✅ Gambar berhasil diupload:', imageUrl);
         } else {
-          setLoading(false);
-          return;
+          console.warn('⚠️ Upload gambar gagal');
+          if (!form.imageUrl) {
+            const lanjut = window.confirm('Gagal upload gambar. Lanjutkan tanpa gambar?');
+            if (!lanjut) {
+              setLoading(false);
+              return;
+            }
+          }
         }
       }
 
+      // Siapkan data produk
       const data = {
-        name: form.name,
-        description: form.description,
+        name: form.name.trim(),
+        description: form.description.trim(),
         price: parseFloat(form.price),
         stock: parseInt(form.stock),
         categoryId: parseInt(form.categoryId),
-        imageUrl: imageUrl
+        imageUrl: imageUrl || ''
       };
 
+      console.log('📤 Data produk:', data);
+
+      // Simpan produk
       let response;
       if (id) {
         response = await api.put(`/products/${id}`, data);
@@ -192,12 +398,17 @@ const ProductForm = () => {
         response = await api.post('/products', data);
       }
 
+      console.log('📥 Response:', response.data);
+
       if (response.data.success) {
         alert(id ? '✅ Produk berhasil diupdate!' : '✅ Produk berhasil ditambahkan!');
         navigate('/products');
+      } else {
+        alert(response.data.message || 'Gagal menyimpan produk');
       }
     } catch (error) {
-      console.error('Error saving product:', error);
+      console.error('❌ Error:', error);
+      console.error('❌ Response error:', error.response?.data);
       alert(error.response?.data?.message || 'Gagal menyimpan produk');
     } finally {
       setLoading(false);
@@ -208,6 +419,10 @@ const ProductForm = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -216,15 +431,12 @@ const ProductForm = () => {
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ============================================ */}
-          {/* IMAGE UPLOAD - DRAG & DROP */}
-          {/* ============================================ */}
+          {/* IMAGE UPLOAD */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               📷 Gambar Produk
             </label>
             
-            {/* Image Preview */}
             {imagePreview ? (
               <div className="relative">
                 <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
@@ -232,6 +444,9 @@ const ProductForm = () => {
                     src={imagePreview} 
                     alt="Preview" 
                     className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/300x300?text=Error';
+                    }}
                   />
                 </div>
                 <button
@@ -251,12 +466,11 @@ const ProductForm = () => {
                 )}
               </div>
             ) : (
-              // Drop Zone
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition ${
                   dragActive 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-gray-300 hover:border-primary/50'
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-300 hover:border-blue-400'
                 }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -269,7 +483,7 @@ const ProductForm = () => {
                     {dragActive ? 'Lepaskan untuk upload' : 'Seret & letakkan gambar di sini'}
                   </p>
                   <p className="text-sm text-gray-400">atau</p>
-                  <label className="cursor-pointer bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dark transition">
+                  <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
                     <span>Pilih Gambar</span>
                     <input
                       ref={fileInputRef}
@@ -287,10 +501,6 @@ const ProductForm = () => {
             )}
           </div>
 
-          {/* ============================================ */}
-          {/* FORM FIELDS */}
-          {/* ============================================ */}
-          
           {/* Nama Produk */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -302,7 +512,7 @@ const ProductForm = () => {
               value={form.name}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Masukkan nama produk"
             />
           </div>
@@ -317,7 +527,7 @@ const ProductForm = () => {
               value={form.description}
               onChange={handleChange}
               rows="3"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Masukkan deskripsi produk"
             />
           </div>
@@ -336,7 +546,7 @@ const ProductForm = () => {
                 required
                 min="0"
                 step="1000"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0"
               />
             </div>
@@ -351,7 +561,7 @@ const ProductForm = () => {
                 onChange={handleChange}
                 required
                 min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0"
               />
             </div>
@@ -362,30 +572,32 @@ const ProductForm = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Kategori *
             </label>
-            <select
-              name="categoryId"
-              value={form.categoryId}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="">Pilih Kategori</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+            {loadingCategories ? (
+              <div className="text-gray-500 text-sm py-2">Memuat kategori...</div>
+            ) : (
+              <select
+                name="categoryId"
+                value={form.categoryId}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Pilih Kategori</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {/* ============================================ */}
-          {/* ACTION BUTTONS */}
-          {/* ============================================ */}
+          {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t border-gray-100">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition disabled:opacity-50 font-medium"
+              className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -412,7 +624,6 @@ const ProductForm = () => {
               <li>Gunakan gambar dengan resolusi minimal 300x300px</li>
               <li>Format gambar: JPG, PNG, GIF, WEBP</li>
               <li>Maksimal ukuran file 5MB</li>
-              <li>Gambar akan otomatis di-crop ke rasio 1:1</li>
             </ul>
           </div>
         </form>

@@ -13,7 +13,8 @@ const router = express.Router();
 // ============================================
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = 'uploads/products/';
+    const uploadDir = path.join(__dirname, '../../uploads/products');
+    // Buat folder jika belum ada
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -42,7 +43,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 // ============================================
-// UPLOAD MIDDLEWARE
+// ✅ UPLOAD MIDDLEWARE - DEFINISIKAN DI SINI
 // ============================================
 const upload = multer({
   storage: storage,
@@ -55,20 +56,34 @@ const upload = multer({
 // ============================================
 router.post('/product', authenticate, upload.single('image'), async (req, res) => {
   try {
+    console.log('📤 Upload request received');
+    console.log('📄 File:', req.file);
+
     if (!req.file) {
       return badRequest(res, 'Tidak ada file yang diupload');
     }
 
+    // Dapatkan base URL dari request
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
+
     const imageUrl = `/uploads/products/${req.file.filename}`;
+    const fullUrl = `${baseUrl}${imageUrl}`;
+    
+    console.log('✅ Image uploaded successfully');
+    console.log('📸 Image URL:', imageUrl);
+    console.log('📸 Full URL:', fullUrl);
     
     success(res, 'Gambar berhasil diupload', {
       imageUrl: imageUrl,
+      fullUrl: fullUrl,
       filename: req.file.filename,
       size: req.file.size,
       mimetype: req.file.mimetype
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error);
     res.status(500).json({
       success: false,
       message: 'Gagal upload gambar',
@@ -86,10 +101,16 @@ router.post('/products', authenticate, upload.array('images', 5), async (req, re
       return badRequest(res, 'Tidak ada file yang diupload');
     }
 
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
+
     const imageUrls = req.files.map(file => `/uploads/products/${file.filename}`);
+    const fullUrls = req.files.map(file => `${baseUrl}/uploads/products/${file.filename}`);
     
     success(res, 'Gambar berhasil diupload', {
       images: imageUrls,
+      fullUrls: fullUrls,
       count: imageUrls.length
     });
   } catch (error) {

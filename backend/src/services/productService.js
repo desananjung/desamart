@@ -1,116 +1,154 @@
+// backend/src/services/productService.js
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const slugify = require('slugify');
 
-const getAll = async (filters = {}) => {
-  const where = {};
-  
-  if (filters.categoryId) {
-    where.categoryId = parseInt(filters.categoryId);
-  }
-  
-  if (filters.search) {
-    where.OR = [
-      { name: { contains: filters.search, mode: 'insensitive' } },
-      { description: { contains: filters.search, mode: 'insensitive' } }
-    ];
-  }
-  
-  if (filters.minPrice) {
-    where.price = { gte: parseFloat(filters.minPrice) };
-  }
-  
-  if (filters.maxPrice) {
-    where.price = { ...where.price, lte: parseFloat(filters.maxPrice) };
-  }
+// ✅ GANTI SEMUA prisma.produk → prisma.Product
+// ✅ GANTI prisma.user → prisma.User
 
-  return await prisma.product.findMany({
-    where,
+const getAll = async (filters) => {
+  return await prisma.Product.findMany({
+    where: filters,
     include: {
-      category: { select: { name: true } },
-      seller: { select: { id: true, name: true } }
+      seller: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          store: true
+        }
+      },
+      category: true,
+      store: true
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { id: 'desc' }
   });
 };
 
 const getById = async (id) => {
-  const product = await prisma.product.findUnique({
+  const product = await prisma.Product.findUnique({
     where: { id },
     include: {
-      category: { select: { name: true } },
-      seller: { select: { id: true, name: true } }
+      seller: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          store: true
+        }
+      },
+      category: true,
+      store: true
     }
   });
-  if (!product) throw new Error('Produk tidak ditemukan');
+  
+  if (!product) {
+    throw new Error('Produk tidak ditemukan');
+  }
+  
   return product;
 };
 
 const create = async (data, sellerId) => {
-  const { name, description, price, stock, categoryId, imageUrl } = data;
-  const slug = slugify(name, { lower: true, strict: true });
+  const existing = await prisma.Product.findFirst({
+    where: { name: data.name }
+  });
   
-  // Cek slug unik
-  const existing = await prisma.product.findUnique({ where: { slug } });
-  if (existing) throw new Error('Nama produk sudah digunakan, gunakan nama lain');
+  if (existing) {
+    throw new Error('Nama produk sudah digunakan, gunakan nama lain');
+  }
   
-  return await prisma.product.create({
+  // Cari store seller
+  const seller = await prisma.User.findUnique({
+    where: { id: sellerId },
+    include: { store: true }
+  });
+  
+  const storeId = seller?.store?.id || null;
+  
+  return await prisma.Product.create({
     data: {
-      name,
-      slug,
-      description,
-      price: parseFloat(price),
-      stock: parseInt(stock || 0),
-      imageUrl,
-      categoryId: parseInt(categoryId),
-      sellerId
+      name: data.name,
+      description: data.description || '',
+      price: parseFloat(data.price),
+      stock: parseInt(data.stock),
+      categoryId: parseInt(data.categoryId),
+      imageUrl: data.imageUrl || null,
+      sellerId: sellerId,
+      storeId: storeId,
+      slug: slugify(data.name, { lower: true }) + '-' + Date.now()
     },
     include: {
-      category: { select: { name: true } }
+      seller: {
+        select: {
+          id: true,
+          name: true,
+          store: true
+        }
+      },
+      category: true,
+      store: true
     }
   });
 };
 
-const update = async (id, data, userId, isAdmin = false) => {
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) throw new Error('Produk tidak ditemukan');
+const update = async (id, data, userId, isAdmin) => {
+  const product = await prisma.Product.findUnique({ 
+    where: { id },
+    include: { seller: true }
+  });
   
-  // Cek kepemilikan: hanya seller sendiri atau admin yang boleh mengedit
+  if (!product) {
+    throw new Error('Produk tidak ditemukan');
+  }
+  
   if (!isAdmin && product.sellerId !== userId) {
-    throw new Error('Anda tidak memiliki akses untuk mengedit produk ini');
+    throw new Error('Anda tidak memiliki akses untuk mengupdate produk ini');
   }
   
-  const { name, description, price, stock, categoryId, imageUrl } = data;
-  const updateData = {};
+  const updateData = { ...data };
+  if (data.price) updateData.price = parseFloat(data.price);
+  if (data.stock) updateData.stock = parseInt(data.stock);
+  if (data.categoryId) updateData.categoryId = parseInt(data.categoryId);
   
-  if (name) {
-    updateData.name = name;
-    updateData.slug = slugify(name, { lower: true, strict: true });
-  }
-  if (description !== undefined) updateData.description = description;
-  if (price !== undefined) updateData.price = parseFloat(price);
-  if (stock !== undefined) updateData.stock = parseInt(stock);
-  if (categoryId) updateData.categoryId = parseInt(categoryId);
-  if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
-
-  return await prisma.product.update({
+  return await prisma.Product.update({
     where: { id },
     data: updateData,
     include: {
-      category: { select: { name: true } }
+      seller: {
+        select: {
+          id: true,
+          name: true,
+          store: true
+        }
+      },
+      category: true,
+      store: true
     }
   });
 };
 
-const remove = async (id, userId, isAdmin = false) => {
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) throw new Error('Produk tidak ditemukan');
+const remove = async (id, userId, isAdmin) => {
+  const product = await prisma.Product.findUnique({ 
+    where: { id },
+    include: { seller: true }
+  });
+  
+  if (!product) {
+    throw new Error('Produk tidak ditemukan');
+  }
   
   if (!isAdmin && product.sellerId !== userId) {
     throw new Error('Anda tidak memiliki akses untuk menghapus produk ini');
   }
   
-  return await prisma.product.delete({ where: { id } });
+  return await prisma.Product.delete({ where: { id } });
 };
 
-module.exports = { getAll, getById, create, update, remove };
+module.exports = {
+  getAll,
+  getById,
+  create,
+  update,
+  remove
+};

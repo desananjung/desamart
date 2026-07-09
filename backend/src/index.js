@@ -2,6 +2,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path'); // ✅ Tambahkan ini
+const fs = require('fs'); // ✅ Tambahkan ini
 const { PrismaClient } = require('@prisma/client');
 
 // Import routes
@@ -35,7 +37,25 @@ const app = express();
 const prisma = new PrismaClient();
 
 // ============================================
-// ✅ CORS CONFIGURATION - DI PERBAIKI
+// ✅ BUAT FOLDER UPLOADS JIKA BELUM ADA
+// ============================================
+const uploadsDir = path.join(__dirname, '../uploads/products');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('📁 Created uploads directory:', uploadsDir);
+}
+
+// ============================================
+// ✅ SERVE STATIC FILES - INI YANG PENTING!
+// ============================================
+// Serve file dari folder uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Atau jika ingin lebih spesifik
+// app.use('/uploads/products', express.static(path.join(__dirname, '../uploads/products')));
+
+// ============================================
+// ✅ CORS CONFIGURATION
 // ============================================
 const allowedOrigins = [
   'http://localhost:3000',
@@ -52,11 +72,10 @@ const allowedOrigins = [
   /\.localhost\.vercel\.app$/
 ];
 
-// ✅ CORS Middleware - Lebih permisif untuk development
+// ✅ CORS Middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Untuk development, izinkan semua origin
   if (process.env.NODE_ENV === 'development' || !origin) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
   } else {
@@ -74,7 +93,6 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, ngrok-skip-browser-warning');
   res.setHeader('Access-Control-Max-Age', '86400');
   
-  // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -82,13 +100,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ CORS Configuration (sebagai backup)
+// ✅ CORS Configuration (backup)
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) {
       return callback(null, true);
     }
-    // Untuk development, izinkan semua
     if (process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
@@ -187,6 +204,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(60));
   console.log(`📡 Server running on: http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`📁 Uploads folder: ${path.join(__dirname, '../uploads')}`);
+  console.log(`🖼️  Static files: http://localhost:${PORT}/uploads/`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('='.repeat(60));
 });

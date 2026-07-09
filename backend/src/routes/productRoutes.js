@@ -1,7 +1,8 @@
+// backend/src/routes/productRoutes.js
 const express = require('express');
-const { authenticate, authorize } = require('../middlewares/authMiddleware');
-const productController = require('../controllers/productController');
 const router = express.Router();
+const productController = require('../controllers/productController');
+const { authenticate, authorize } = require('../middlewares/authMiddleware');
 
 // ✅ PUBLIK - Semua orang bisa lihat produk
 router.get('/', productController.getAll);

@@ -29,6 +29,7 @@ const villageServicesRoutes = require('./routes/villageServicesRoutes');
 const desaAdminRoutes = require('./routes/desaAdminRoutes');
 const courierRoutes = require('./routes/courierRoutes');
 const trackingRoutes = require('./routes/trackingRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -136,6 +137,7 @@ app.use('/api/village-services', villageServicesRoutes);
 app.use('/api/desa-admin', desaAdminRoutes);
 app.use('/api/couriers', courierRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // ============================================
 // HEALTH CHECK

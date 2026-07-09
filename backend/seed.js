@@ -146,6 +146,23 @@ async function seedCategories(prisma) {
   console.log(`✅ ${categories.length} categories created`);
 }
 
+async function updateProductSeller() {
+  // Update product dengan sellerId yang benar
+  const product = await prisma.product.findFirst({
+    where: { name: 'kue' } // atau nama product lainnya
+  });
+  
+  if (product) {
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { sellerId: 2 }
+    });
+    console.log('✅ Product sellerId updated to 2');
+  }
+}
+
+// Panggil fungsi
+updateProductSeller();
 // ============================================
 // MAIN FUNCTION
 // ============================================

@@ -1,9 +1,13 @@
 // backend/src/controllers/orderController.js
+// COPY PASTE SEMUA KODE INI
+
 const orderService = require('../services/orderService');
 const { success, created, badRequest, notFound, forbidden } = require('../utils/responseHelper');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { createNotification } = require('../utils/notificationHelper');
+
+const ADMIN_ID = 1;
 
 // ============================================
 // CREATE ORDER
@@ -31,6 +35,14 @@ const createOrder = async (req, res, next) => {
       'ORDER',
       '📦 Pesanan Dibuat',
       `Pesanan #${order.id} berhasil dibuat. Silakan selesaikan pembayaran.`,
+      { orderId: order.id }
+    );
+    
+    await createNotification(
+      ADMIN_ID,
+      'ORDER',
+      '📦 Pesanan Baru',
+      `Pesanan baru #${order.id} dari ${req.user.name}`,
       { orderId: order.id }
     );
     
@@ -77,7 +89,6 @@ const getMyOrders = async (req, res, next) => {
           },
           payments: true,
           shipping: true
-          // ✅ HAPUS history
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -123,12 +134,11 @@ const getOrderDetail = async (req, res, next) => {
     const order = await prisma.order.findUnique({
       where: { id: parseInt(id) },
       include: {
-        user: {
+        User: {
           select: {
             id: true,
             name: true,
-            email: true,
-            phone: true
+            email: true
           }
         },
         items: {
@@ -146,7 +156,6 @@ const getOrderDetail = async (req, res, next) => {
         },
         payments: true,
         shipping: true
-        // ✅ HAPUS history dan escrow
       }
     });
     
@@ -154,8 +163,9 @@ const getOrderDetail = async (req, res, next) => {
       return notFound(res, 'Pesanan tidak ditemukan');
     }
     
+    // ✅ CEK AKSES: Buyer, Seller, atau Admin
     const isOwner = order.userId === userId;
-    const isSeller = order.items.some(item => item.product.sellerId === userId);
+    const isSeller = order.items.some(item => item.product?.sellerId === userId);
     const isAdmin = userRole === 'ADMIN';
     
     if (!isOwner && !isSeller && !isAdmin) {
@@ -195,7 +205,26 @@ const processPayment = async (req, res, next) => {
     
     const order = await prisma.order.findUnique({
       where: { id: parseInt(orderId) },
-      include: { items: { include: { product: true } } }
+      include: { 
+        items: { 
+          include: { 
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sellerId: true
+              }
+            }
+          } 
+        },
+        User: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
     });
     
     if (!order) {
@@ -222,6 +251,14 @@ const processPayment = async (req, res, next) => {
         paymentStatus: 'UNPAID'
       }
     });
+    
+    await createNotification(
+      ADMIN_ID,
+      'PAYMENT',
+      '💳 Pesanan Siap Dibayar',
+      `Pesanan #${orderId} oleh ${order.User?.name} siap dibayar dengan metode ${paymentMethod}`,
+      { orderId }
+    );
     
     res.json({
       success: true,
@@ -272,7 +309,7 @@ const uploadPaymentProof = async (req, res, next) => {
     });
     
     await createNotification(
-      1,
+      ADMIN_ID,
       'PAYMENT',
       '💳 Bukti Transfer Baru',
       `Ada bukti transfer baru untuk pesanan #${orderId}`,
@@ -286,7 +323,7 @@ const uploadPaymentProof = async (req, res, next) => {
 };
 
 // ============================================
-// VERIFY PAYMENT (Admin)
+// VERIFY PAYMENT
 // ============================================
 const verifyPayment = async (req, res, next) => {
   try {
@@ -295,7 +332,19 @@ const verifyPayment = async (req, res, next) => {
     
     const order = await prisma.order.findUnique({
       where: { id: parseInt(orderId) },
-      include: { items: { include: { product: true } } }
+      include: { 
+        items: { 
+          include: { 
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sellerId: true
+              }
+            }
+          } 
+        } 
+      }
     });
     
     if (!order) {
@@ -316,13 +365,32 @@ const verifyPayment = async (req, res, next) => {
       }
     });
     
-    // ✅ HAPUS escrow
-    // await escrowService.createEscrow(...);
-    
     await createNotification(
       order.userId,
       'PAYMENT',
       '✅ Pembayaran Diverifikasi',
+      `Pembayaran untuk pesanan #${orderId} telah diverifikasi.`,
+      { orderId }
+    );
+    
+    const sellerIds = [];
+    for (const item of order.items) {
+      if (item.product?.sellerId && !sellerIds.includes(item.product.sellerId)) {
+        sellerIds.push(item.product.sellerId);
+        await createNotification(
+          item.product.sellerId,
+          'PAYMENT',
+          '💰 Pembayaran Masuk',
+          `Pembayaran untuk produk "${item.product.name}" telah masuk.`,
+          { orderId, productName: item.product.name }
+        );
+      }
+    }
+    
+    await createNotification(
+      ADMIN_ID,
+      'PAYMENT',
+      '💰 Pembayaran Diverifikasi',
       `Pembayaran untuk pesanan #${orderId} telah diverifikasi.`,
       { orderId }
     );
@@ -358,7 +426,14 @@ const updateSellerOrderStatus = async (req, res, next) => {
           }
         }
       },
-      include: { user: true }
+      include: { 
+        user: true,
+        items: {
+          include: {
+            product: true
+          }
+        }
+      }
     });
     
     if (!order) {
@@ -384,6 +459,14 @@ const updateSellerOrderStatus = async (req, res, next) => {
       'ORDER',
       `📦 ${status === 'PROCESSING' ? 'Pesanan Diproses' : 'Siap Diambil'}`,
       buyerMessages[status],
+      { orderId: id }
+    );
+    
+    await createNotification(
+      ADMIN_ID,
+      'ORDER',
+      `📦 Pesanan ${status === 'PROCESSING' ? 'Diproses' : 'Siap Diambil'}`,
+      `Pesanan #${id} oleh ${order.user?.name} ${status === 'PROCESSING' ? 'sedang diproses' : 'siap diambil'}`,
       { orderId: id }
     );
     
@@ -504,7 +587,7 @@ const confirmReceived = async (req, res, next) => {
     }
     
     await createNotification(
-      1,
+      ADMIN_ID,
       'ORDER',
       '💰 Pencairan Dana',
       `Pesanan #${id} selesai. Waktunya mencairkan dana ke penjual.`,
@@ -518,11 +601,10 @@ const confirmReceived = async (req, res, next) => {
 };
 
 // ============================================
-// ADMIN - RELEASE ESCROW (SEMENTARA DI-NONAKTIFKAN)
+// ADMIN - RELEASE ESCROW
 // ============================================
 const releaseEscrow = async (req, res, next) => {
   try {
-    // TODO: Implement escrow release
     success(res, 'Fitur escrow sedang dalam pengembangan');
   } catch (error) {
     next(error);
@@ -530,11 +612,10 @@ const releaseEscrow = async (req, res, next) => {
 };
 
 // ============================================
-// GET ORDER HISTORY (SEMENTARA DI-NONAKTIFKAN)
+// GET ORDER HISTORY
 // ============================================
 const getOrderHistory = async (req, res, next) => {
   try {
-    // TODO: Implement order history
     success(res, 'Fitur riwayat pesanan sedang dalam pengembangan');
   } catch (error) {
     next(error);
@@ -590,6 +671,8 @@ const getSellerOrders = async (req, res, next) => {
     const sellerId = req.user.id;
     const { status, page = 1, limit = 10 } = req.query;
     
+    console.log(`📦 SELLER ORDERS - Seller ID: ${sellerId}`);
+    
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
     const where = {
@@ -607,12 +690,11 @@ const getSellerOrders = async (req, res, next) => {
       prisma.order.findMany({
         where,
         include: {
-          user: {
+          User: {
             select: {
               id: true,
               name: true,
-              email: true,
-              phone: true
+              email: true
             }
           },
           items: {
@@ -622,14 +704,14 @@ const getSellerOrders = async (req, res, next) => {
                   id: true,
                   name: true,
                   price: true,
-                  imageUrl: true
+                  imageUrl: true,
+                  sellerId: true
                 }
               }
             }
           },
           payments: true,
           shipping: true
-          // ✅ HAPUS history
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -637,6 +719,8 @@ const getSellerOrders = async (req, res, next) => {
       }),
       prisma.order.count({ where })
     ]);
+    
+    console.log(`✅ Found ${orders.length} orders for seller ${sellerId}`);
     
     const formattedOrders = orders.map(order => ({
       ...order,
@@ -654,7 +738,7 @@ const getSellerOrders = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching seller orders:', error);
+    console.error('❌ Error fetching seller orders:', error);
     res.status(500).json({
       success: false,
       message: 'Gagal mengambil pesanan',

@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const router = express.Router();
 
 // ============================================
-// GET TRACKING BY ORDER ID - VERSI SEDERHANA
+// GET TRACKING BY ORDER ID
 // ============================================
 router.get('/:orderId', authenticate, async (req, res) => {
   try {
@@ -16,11 +16,33 @@ router.get('/:orderId', authenticate, async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    console.log(`📦 Tracking order ${orderId} for user ${userId}`);
+    console.log(`📦 Tracking order ${orderId} for user ${userId} (${userRole})`);
 
-    // ✅ CARI ORDER TANPA INCLUDE (yang bermasalah)
+    // Cari order dengan include product untuk cek seller
     const order = await prisma.order.findUnique({
-      where: { id: parseInt(orderId) }
+      where: { id: parseInt(orderId) },
+      include: {
+        User: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                imageUrl: true,
+                sellerId: true
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!order) {
@@ -28,23 +50,22 @@ router.get('/:orderId', authenticate, async (req, res) => {
       return notFound(res, 'Pesanan tidak ditemukan');
     }
 
-    console.log(`✅ Order ${orderId} found, status: ${order.status}`);
-    console.log(`📦 Order data:`, {
-      id: order.id,
-      userId: order.userId,
-      status: order.status,
-      total: order.total,
-      address: order.address,
-      phone: order.phone
-    });
+    // ✅ CEK AKSES: Buyer (pemilik order), Seller (punya produk di order), atau Admin
+    const isOwner = order.userId === userId;
+    const isSeller = order.items.some(item => item.product?.sellerId === userId);
+    const isAdmin = userRole === 'ADMIN';
 
-    // Cek akses
-    if (order.userId !== userId && userRole !== 'ADMIN') {
+    console.log(`🔍 Access check: isOwner=${isOwner}, isSeller=${isSeller}, isAdmin=${isAdmin}`);
+
+    if (!isOwner && !isSeller && !isAdmin) {
+      console.log(`❌ Access denied for user ${userId}`);
       return forbidden(res, 'Anda tidak memiliki akses ke pesanan ini');
     }
 
+    console.log(`✅ Access granted for user ${userId}`);
+
     // ============================================
-    // TRACKING HISTORY SEDERHANA
+    // BUILD TRACKING HISTORY
     // ============================================
     const trackingHistory = [];
 
@@ -59,7 +80,7 @@ router.get('/:orderId', authenticate, async (req, res) => {
     });
 
     // 2. Payment
-    if (order.paymentStatus === 'PAID' || order.paymentStatus === 'VERIFIED') {
+    if (order.paymentStatus === 'PAID' || order.paymentStatus === 'VERIFIED' || order.paymentStatus === 'CONFIRMED') {
       trackingHistory.push({
         status: 'PAYMENT_VERIFIED',
         description: 'Pembayaran telah diverifikasi',
@@ -74,7 +95,7 @@ router.get('/:orderId', authenticate, async (req, res) => {
     if (order.status === 'PROCESSING') {
       trackingHistory.push({
         status: 'PROCESSING',
-        description: 'Pesanan sedang diproses',
+        description: 'Pesanan sedang diproses oleh penjual',
         location: 'Toko',
         createdAt: order.updatedAt,
         isCompleted: true,
@@ -82,19 +103,31 @@ router.get('/:orderId', authenticate, async (req, res) => {
       });
     }
 
-    // 4. Shipped / In Transit
+    // 4. Ready Pickup
+    if (order.status === 'READY_PICKUP') {
+      trackingHistory.push({
+        status: 'READY_PICKUP',
+        description: 'Pesanan siap diambil kurir',
+        location: 'Toko',
+        createdAt: order.updatedAt,
+        isCompleted: true,
+        icon: '📋'
+      });
+    }
+
+    // 5. Shipped / In Transit
     if (order.status === 'SHIPPED' || order.status === 'IN_TRANSIT') {
       trackingHistory.push({
         status: 'SHIPPED',
         description: 'Pesanan dalam perjalanan',
         location: 'Dalam perjalanan',
-        createdAt: order.updatedAt,
+        createdAt: order.shippedAt || order.updatedAt,
         isCompleted: false,
         icon: '🚚'
       });
     }
 
-    // 5. Delivered
+    // 6. Delivered
     if (order.status === 'DELIVERED') {
       trackingHistory.push({
         status: 'DELIVERED',
@@ -106,35 +139,35 @@ router.get('/:orderId', authenticate, async (req, res) => {
       });
     }
 
-    // 6. Completed
+    // 7. Completed
     if (order.status === 'COMPLETED') {
       trackingHistory.push({
         status: 'COMPLETED',
         description: 'Pesanan selesai',
         location: order.address || 'Alamat tujuan',
-        createdAt: order.updatedAt,
+        createdAt: order.completedAt || order.updatedAt,
         isCompleted: true,
         icon: '🎉'
       });
     }
 
-    // 7. Cancelled
+    // 8. Cancelled
     if (order.status === 'CANCELLED') {
       trackingHistory.push({
         status: 'CANCELLED',
         description: 'Pesanan dibatalkan',
         location: '-',
-        createdAt: order.updatedAt,
+        createdAt: order.cancelledAt || order.updatedAt,
         isCompleted: true,
         icon: '❌'
       });
     }
 
-    // Sort by createdAt
+    // Sort by createdAt (oldest first)
     trackingHistory.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     // ============================================
-    // RESPONSE
+    // RESPONSE DATA
     // ============================================
     const trackingData = {
       order: {
@@ -146,14 +179,17 @@ router.get('/:orderId', authenticate, async (req, res) => {
         grandTotal: order.total + (order.shippingCost || 0),
         courier: order.courierName || 'Belum ditentukan',
         trackingNumber: order.shippingNumber || '-',
+        address: order.address,
+        phone: order.phone,
         createdAt: order.createdAt,
-        estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+        estimatedDelivery: order.deliveredAt 
+          ? new Date(order.deliveredAt) 
+          : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
       },
       trackingHistory: trackingHistory,
       currentStatus: order.status
     };
 
-    console.log('✅ Tracking data sent');
     success(res, 'Data tracking berhasil diambil', trackingData);
   } catch (error) {
     console.error('❌ Error fetching tracking:', error);
@@ -161,7 +197,7 @@ router.get('/:orderId', authenticate, async (req, res) => {
       success: false,
       message: 'Gagal mengambil data tracking',
       error: error.message,
-      stack: error.stack
+      timestamp: new Date().toISOString()
     });
   }
 });
